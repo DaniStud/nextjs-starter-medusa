@@ -55,3 +55,6 @@ dump.rdb
 /blob-report/
 /playwright/.cache/
 /playwright/.auth
+
+# medusa postgres data
+medusa-backend/postgres-data
