@@ -37,7 +37,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
       )
     case isManual(paymentSession?.provider_id):
       return (
-        <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
+        <MercuryPaymentButton cart={cart} notReady={notReady} data-testid={dataTestId} />
       )
     default:
       return <Button disabled>Select a payment method</Button>
@@ -151,24 +151,56 @@ const StripePaymentButton = ({
   )
 }
 
-const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
+const MercuryPaymentButton = ({ cart, notReady, "data-testid": dataTestId }: { cart: HttpTypes.StoreCart, notReady: boolean, "data-testid"?: string }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const onPaymentCompleted = async () => {
-    await placeOrder()
-      .catch((err) => {
-        setErrorMessage(err.message)
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
-  }
-
-  const handlePayment = () => {
+  const handlePayment = async () => {
     setSubmitting(true)
+    setErrorMessage(null)
 
-    onPaymentCompleted()
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+      const response = await fetch(`${backendUrl}/store/mercury/sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cart_id: cart.id })
+      })
+
+      if (!response.ok) {
+        const errData = await response.json()
+        throw new Error(errData.message || "Failed to sign Mercury request")
+      }
+
+      const data = await response.json()
+
+      // Construct Sandbox URL (using sandbox unless env var overrides, logic in backend decides signature but here we decide URL prefix if dynamic)
+      // Backend handles signature.
+      // We can just construct the URL.
+      // Assuming Backend returns 'widget_id', 'signature', etc.
+
+      // Use Sandbox URL by default as requested
+      const baseUrl = "https://sandbox-exchange.mrcr.io"
+
+      const query = new URLSearchParams({
+        widget_id: data.widget_id,
+        fiat_amount: data.fiat_amount,
+        fiat_currency: data.fiat_currency,
+        currency: data.currency,
+        address: data.address,
+        merchant_transaction_id: data.merchant_transaction_id,
+        signature: data.signature,
+        type: 'buy', // Explicitly buy
+        payment_method: 'card', // Explicitly card
+        // fix_fiat_currency: 'true' 
+      })
+
+      window.location.href = `${baseUrl}/?${query.toString()}`
+
+    } catch (err: any) {
+      setErrorMessage(err.message)
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -178,13 +210,13 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
         isLoading={submitting}
         onClick={handlePayment}
         size="large"
-        data-testid="submit-order-button"
+        data-testid={dataTestId}
       >
-        Place order
+        Pay with Credit Card (via Mercury)
       </Button>
       <ErrorMessage
         error={errorMessage}
-        data-testid="manual-payment-error-message"
+        data-testid="mercury-payment-error-message"
       />
     </>
   )
