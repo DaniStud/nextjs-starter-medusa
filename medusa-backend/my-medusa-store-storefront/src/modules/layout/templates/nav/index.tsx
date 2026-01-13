@@ -38,6 +38,13 @@ export default async function Nav() {
               >
                 Account
               </LocalizedClientLink>
+              <LocalizedClientLink
+                className="hover:text-ui-fg-base"
+                href="/terms-and-conditions"
+                data-testid="nav-terms-link"
+              >
+                Terms & Conditions
+              </LocalizedClientLink>
             </div>
             <Suspense
               fallback={

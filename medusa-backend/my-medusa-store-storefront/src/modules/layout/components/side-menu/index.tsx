@@ -15,6 +15,7 @@ const SideMenuItems = {
   Account: "/account",
   Cart: "/cart",
   "Privacy Policy": "/privacy-policy",
+  "Terms & Conditions": "/terms-and-conditions",
 }
 
 const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
