@@ -7,7 +7,7 @@ const Hero = () => {
     <div className="h-[75vh] sm:w-[75vw] m-auto border-b border-ui-border-base relative bg-[#e3e7ef] bg-[url('/images/laneige-02.jpg')] bg-center bg-cover sm:bg-contain sm:bg-right sm:bg-no-repeat ">
       <div className="absolute inset-0 z-10 justify-center m-4 small:p-32 gap-6">
         <div>
-          
+
           <div className="mt-4">
             <Heading
               level="h1"
