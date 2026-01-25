@@ -15,12 +15,15 @@ type Props = {
   }>
 }
 
-export async function generateStaticParams() {
-  const product_categories = await listCategories()
+export const dynamicParams = true
 
-  if (!product_categories) {
-    return []
-  }
+export async function generateStaticParams() {
+  try {
+    const product_categories = await listCategories()
+
+    if (!product_categories) {
+      return []
+    }
 
   const countryCodes = await listRegions().then((regions: StoreRegion[]) =>
     regions?.map((r) => r.countries?.map((c) => c.iso_2)).flat()
@@ -40,6 +43,10 @@ export async function generateStaticParams() {
     .flat()
 
   return staticParams
+  } catch (error) {
+    console.log("Failed to generate static paths for category pages:", error)
+    return []
+  }
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
