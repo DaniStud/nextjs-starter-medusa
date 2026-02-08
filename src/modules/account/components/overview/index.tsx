@@ -81,45 +81,7 @@ const Overview = ({ customer, orders }: OverviewProps) => {
                         data-testid="order-wrapper"
                         data-value={order.id}
                       >
-                        <LocalizedClientLink
-                          href={`/account/orders/details/${order.id}`}
-                        >
-                          <Container className="bg-gray-50 flex justify-between items-center p-4">
-                            <div className="grid grid-cols-3 grid-rows-2 text-small-regular gap-x-4 flex-1">
-                              <span className="font-semibold">Date placed</span>
-                              <span className="font-semibold">
-                                Order number
-                              </span>
-                              <span className="font-semibold">
-                                Total amount
-                              </span>
-                              <span data-testid="order-created-date">
-                                {new Date(order.created_at).toDateString()}
-                              </span>
-                              <span
-                                data-testid="order-id"
-                                data-value={order.display_id}
-                              >
-                                #{order.display_id}
-                              </span>
-                              <span data-testid="order-amount">
-                                {convertToLocale({
-                                  amount: order.total,
-                                  currency_code: order.currency_code,
-                                })}
-                              </span>
-                            </div>
-                            <button
-                              className="flex items-center justify-between"
-                              data-testid="open-order-button"
-                            >
-                              <span className="sr-only">
-                                Go to order #{order.display_id}
-                              </span>
-                              <ChevronDown className="-rotate-90" />
-                            </button>
-                          </Container>
-                        </LocalizedClientLink>
+                        {/* Account order details link removed */}
                       </li>
                     )
                   })
