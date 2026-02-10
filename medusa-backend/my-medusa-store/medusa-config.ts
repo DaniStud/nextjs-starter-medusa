@@ -12,6 +12,25 @@ module.exports = defineConfig({
       authCors: process.env.AUTH_CORS!,
       jwtSecret: process.env.JWT_SECRET || "supersecret",
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+      // Ensure express parses raw body for Stripe webhook verification
+      rawBodyPaths: ["/stripe/webhook"],
     }
-  }
+  },
+  modules: [
+    {
+      // Attach Stripe as a provider to the existing payment module
+      key: "payment",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/payment-stripe",
+            id: "stripe",
+            options: {
+              apiKey: process.env.STRIPE_API_KEY,
+            },
+          },
+        ],
+      },
+    },
+  ],
 })
