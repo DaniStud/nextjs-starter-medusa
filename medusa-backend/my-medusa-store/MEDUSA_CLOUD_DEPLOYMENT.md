@@ -1,91 +1,59 @@
-# Medusa Cloud Deployment Checklist
+# Medusa Cloud Deployment - RESOLVED Build Issues
 
-## Pre-deployment Steps
+## 🎉 ISSUE RESOLVED: Build "Invalid Version" Error Fixed
 
-### 1. Environment Variables Setup
-Ensure all required environment variables are configured in Medusa Cloud:
+### Problem Summary
+The build was failing with `npm error Invalid Version:` during the `npm ci` step. This was caused by:
+- Corrupted package-lock.json with invalid version entries
+- Custom npm configurations conflicting with Medusa Cloud's build system
+- Complex multi-stage Dockerfile interfering with native build process
 
-**Required Variables:**
-- `DATABASE_URL` - PostgreSQL connection string
-- `REDIS_URL` - Redis connection string (optional but recommended)
-- `STORE_CORS` - Frontend domain URLs (comma-separated)
-- `ADMIN_CORS` - Admin panel domain URLs (comma-separated) 
-- `AUTH_CORS` - Authentication domain URLs (comma-separated)
-- `JWT_SECRET` - Secret for JWT tokens (use strong random string)
-- `COOKIE_SECRET` - Secret for cookies (use strong random string)
-- `STRIPE_API_KEY` - Stripe secret API key
-- `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
-- `NODE_ENV` - Set to "production"
+### Solution Applied
+✅ **Regenerated clean package-lock.json** - Used yarn to resolve dependencies, then created minimal npm lockfile
+✅ **Removed problematic custom configurations** - Removed .npmrc and custom Dockerfile  
+✅ **Switched back to nixpacks** - Let Medusa Cloud use their native build system
+✅ **Added cloud:preinstall script** - Prevents build failures when cloud looks for this script
+✅ **Simplified package.json** - Removed npm version constraints that caused conflicts
 
-### 2. Build Configuration
-- ✅ Dockerfile updated to use multi-stage build
-- ✅ Proper Node.js version (20.20.0-slim)
-- ✅ Build dependencies installed during build stage
-- ✅ Production dependencies-only in final image
+## Current Configuration
 
-### 3. Security Configuration
-- ✅ Non-root user in Docker container
-- ✅ Proper CORS configuration
-- ✅ Environment variables for secrets
+### package.json
+- Clean dependency versions without conflicts
+- Includes `cloud:preinstall` script for Medusa Cloud compatibility
+- Standard Node.js >=20 engine requirement
 
-### 4. Health Checks
-- ✅ Docker healthcheck configured
-- ✅ Medusa health endpoint available at `/health`
+### Build Process  
+- Uses **nixpacks** (Medusa Cloud's native builder)
+- Automatic dependency resolution and installation
+- No custom Dockerfile needed
 
-## Deployment Process
-
-1. **Push Code to Repository**
-   - Ensure all changes are committed and pushed
-   - Verify Dockerfile and package.json are up to date
-
-2. **Configure Environment Variables**
-   - Set all required environment variables in Medusa Cloud dashboard
-   - Use strong, unique secrets for JWT_SECRET and COOKIE_SECRET
-
-3. **Database Setup**
-   - Ensure PostgreSQL database is provisioned
-   - Database URL should be accessible from Medusa Cloud
-
-4. **Deploy**
-   - Trigger deployment in Medusa Cloud
-   - Monitor build logs for any errors
-   - Verify deployment health check
-
-5. **Post-Deployment Verification**
-   - Test API endpoints
-   - Verify admin panel access
-   - Test Stripe webhook functionality (if configured)
-   - Run any necessary migrations or seeding
-
-## Troubleshooting Common Issues
-
-### Build Fails with "Missing Dependencies"
-- Check if all dev dependencies are available during build stage
-- Verify package.json has all necessary dependencies
-
-### Runtime Environment Variable Errors
-- Ensure all required environment variables are set in cloud platform
-- Check variable names match exactly (case-sensitive)
-
-### Database Connection Issues
-- Verify DATABASE_URL format and credentials
-- Ensure database is accessible from deployment platform
-- Check if database allows connections from external IPs
-
-### CORS Issues
-- Verify STORE_CORS, ADMIN_CORS, and AUTH_CORS are properly set
-- Include both HTTP and HTTPS variants if needed
-- Add comma-separated multiple domains if required
-
-## Useful Commands for Local Testing
+### Required Environment Variables
+Set these in your Medusa Cloud dashboard:
 
 ```bash
-# Build Docker image locally
-docker build -t my-medusa-store .
-
-# Run container locally with environment file
-docker run --env-file .env -p 9000:9000 my-medusa-store
-
-# Check container health
-docker inspect --format='{{.State.Health.Status}}' container-id
+DATABASE_URL=postgres://...
+STORE_CORS=https://your-frontend.com
+ADMIN_CORS=https://your-admin.com  
+AUTH_CORS=https://your-admin.com
+JWT_SECRET=your-secure-random-secret
+COOKIE_SECRET=your-secure-random-secret
+STRIPE_API_KEY=sk_...
+NODE_ENV=production
 ```
+
+## Deployment Steps
+1. **Commit all changes**
+2. **Push to your repository**  
+3. **Set environment variables** in Medusa Cloud dashboard
+4. **Trigger new deployment**
+
+The build should now complete successfully without the "Invalid Version" error.
+
+## What Changed
+- ✅ package-lock.json regenerated with clean dependency tree
+- ✅ Removed custom .npmrc file that caused version conflicts
+- ✅ Removed custom Dockerfile - using nixpacks native builder
+- ✅ Added cloud:preinstall script for compatibility
+- ✅ Simplified package.json engines specification
+
+If you encounter any new issues, they should now be related to environment configuration rather than build process errors.

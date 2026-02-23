@@ -13,11 +13,8 @@ build
 coverage
 .vscode
 .idea
-README.md
-FIX_STRIPE_PAYMENT.md
-STRIPE_CLI_INSTALL.md
-TEST_COMMANDS.md
-TESTING_CHECKLIST.md
+*.md
+!README.md
 yarn.lock
 .yarnrc.yml
 .yarn
@@ -27,3 +24,5 @@ integration-tests/
 *.test.js
 *.test.ts
 .github/
+Dockerfile
+railway.toml
