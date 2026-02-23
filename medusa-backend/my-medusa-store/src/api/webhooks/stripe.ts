@@ -11,7 +11,7 @@ import { NextFunction, Request, Response } from "express"
 import Stripe from "stripe"
 
 const stripeSecret = process.env.STRIPE_WEBHOOK_SECRET
-const stripe = new Stripe(process.env.STRIPE_API_KEY || "", { apiVersion: "2022-11-15" })
+const stripe = new Stripe(process.env.STRIPE_API_KEY || "")
 
 // Idempotency tracker
 const processedEvents = new Set<string>()
@@ -22,7 +22,7 @@ export default async function handler(req: Request, res: Response, next: NextFun
 
   try {
     if (stripeSecret && sig) {
-      event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, stripeSecret)
+      event = stripe.webhooks.constructEvent((req as any).rawBody || req.body, sig, stripeSecret)
     } else {
       // Fallback: parse body directly (insecure for production)
       console.warn("[Stripe Webhook] WARNING: No webhook secret configured, skipping signature verification")

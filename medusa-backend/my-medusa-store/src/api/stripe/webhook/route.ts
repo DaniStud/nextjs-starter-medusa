@@ -2,7 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import Stripe from "stripe"
 
-const stripe = new Stripe(process.env.STRIPE_API_KEY || "", { apiVersion: "2022-11-15" })
+const stripe = new Stripe(process.env.STRIPE_API_KEY || "")
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
 // Idempotency tracker (in-memory; consider Redis for production multi-instance deployments)
