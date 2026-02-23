@@ -55,12 +55,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "overrides": {
-    "@babel/types": "7.26.0",
-    "@babel/parser": "7.26.2",
-    "@babel/traverse": "7.25.9",
-    "@babel/generator": "7.26.0",
-    "@babel/core": "7.26.0"
   }
 }

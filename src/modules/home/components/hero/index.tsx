@@ -20,12 +20,11 @@ const Hero = () => {
           </Heading>
         </span>
         <a
-          href="https://github.com/medusajs/nextjs-starter-medusa"
+          href="https://www.10-shirts.dk/dk/store"
           target="_blank"
         >
           <Button variant="secondary">
-            View on GitHub
-            <Github />
+            Shop Nu
           </Button>
         </a>
       </div>
