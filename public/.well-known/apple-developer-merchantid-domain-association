@@ -1,0 +1,4 @@
+Replace this file with the actual domain association file from your Stripe Dashboard:
+Stripe Dashboard -> Settings -> Payment Methods -> Apple Pay -> Add Domain -> Download verification file
+
+Then place the downloaded file content here (it will be a long hex string).

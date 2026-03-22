@@ -1,6 +1,6 @@
 "use client"
 
-import { Stripe, StripeElementsOptions } from "@stripe/stripe-js"
+import { Stripe, StripeElementsOptions, Appearance } from "@stripe/stripe-js"
 import { Elements } from "@stripe/react-stripe-js"
 import { HttpTypes } from "@medusajs/types"
 import { createContext } from "react"
@@ -14,16 +14,21 @@ type StripeWrapperProps = {
 
 export const StripeContext = createContext(false)
 
+const appearance: Appearance = {
+  theme: "stripe",
+  variables: {
+    colorPrimary: "#0570de",
+    fontFamily: "Inter, sans-serif",
+    borderRadius: "6px",
+  },
+}
+
 const StripeWrapper: React.FC<StripeWrapperProps> = ({
   paymentSession,
   stripeKey,
   stripePromise,
   children,
 }) => {
-  const options: StripeElementsOptions = {
-    clientSecret: paymentSession!.data?.client_secret as string | undefined,
-  }
-
   if (!stripeKey) {
     throw new Error(
       "Stripe key is missing. Set NEXT_PUBLIC_STRIPE_KEY environment variable."
@@ -40,6 +45,11 @@ const StripeWrapper: React.FC<StripeWrapperProps> = ({
     throw new Error(
       "Stripe client secret is missing. Cannot initialize Stripe."
     )
+  }
+
+  const options: StripeElementsOptions = {
+    clientSecret: paymentSession.data.client_secret as string,
+    appearance,
   }
 
   return (

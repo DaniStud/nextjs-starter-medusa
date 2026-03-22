@@ -68,68 +68,70 @@ const StripePaymentButton = ({
 
   const stripe = useStripe()
   const elements = useElements()
-  const card = elements?.getElement("card")
 
   const session = cart.payment_collection?.payment_sessions?.find(
     (s) => s.status === "pending"
   )
 
-  const disabled = !stripe || !elements ? true : false
+  const disabled = !stripe || !elements
 
   const handlePayment = async () => {
     setSubmitting(true)
+    setErrorMessage(null)
 
-    if (!stripe || !elements || !card || !cart) {
+    if (!stripe || !elements || !cart) {
       setSubmitting(false)
       return
     }
 
-    await stripe
-      .confirmCardPayment(session?.data.client_secret as string, {
-        payment_method: {
-          card: card,
-          billing_details: {
-            name:
-              cart.billing_address?.first_name +
-              " " +
-              cart.billing_address?.last_name,
-            address: {
-              city: cart.billing_address?.city ?? undefined,
-              country: cart.billing_address?.country_code ?? undefined,
-              line1: cart.billing_address?.address_1 ?? undefined,
-              line2: cart.billing_address?.address_2 ?? undefined,
-              postal_code: cart.billing_address?.postal_code ?? undefined,
-              state: cart.billing_address?.province ?? undefined,
-            },
-            email: cart.email,
-            phone: cart.billing_address?.phone ?? undefined,
-          },
-        },
-      })
-      .then(({ error, paymentIntent }) => {
-        if (error) {
-          const pi = error.payment_intent
+    // Validate the PaymentElement form first
+    const { error: submitError } = await elements.submit()
+    if (submitError) {
+      setErrorMessage(submitError.message || "Please check your payment details.")
+      setSubmitting(false)
+      return
+    }
 
-          if (
-            (pi && pi.status === "requires_capture") ||
-            (pi && pi.status === "succeeded")
-          ) {
-            onPaymentCompleted()
-          }
+    const countryCode = cart.shipping_address?.country_code || "us"
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8000"
 
-          setErrorMessage(error.message || null)
-          return
-        }
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      clientSecret: session?.data.client_secret as string,
+      confirmParams: {
+        return_url: `${baseUrl}/${countryCode}/checkout?step=review&payment_intent_client_secret=${session?.data.client_secret}`,
+      },
+      redirect: "if_required",
+    })
 
-        if (
-          (paymentIntent && paymentIntent.status === "requires_capture") ||
-          paymentIntent.status === "succeeded"
-        ) {
-          return onPaymentCompleted()
-        }
-
+    if (error) {
+      // If the error has a payment intent that succeeded/requires_capture, still complete
+      const pi = error.payment_intent
+      if (
+        pi &&
+        (pi.status === "requires_capture" || pi.status === "succeeded")
+      ) {
+        await onPaymentCompleted()
         return
-      })
+      }
+
+      setErrorMessage(error.message || "An unexpected error occurred.")
+      setSubmitting(false)
+      return
+    }
+
+    if (
+      paymentIntent &&
+      (paymentIntent.status === "requires_capture" ||
+        paymentIntent.status === "succeeded")
+    ) {
+      await onPaymentCompleted()
+      return
+    }
+
+    // For any other status, stop submitting and let the user know
+    setSubmitting(false)
   }
 
   return (

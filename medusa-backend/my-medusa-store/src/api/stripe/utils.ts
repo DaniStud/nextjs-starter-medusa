@@ -119,29 +119,66 @@ export function extractStripeErrorDetails(paymentIntent: Stripe.PaymentIntent) {
 }
 
 /**
- * Check if webhook event should be processed (idempotency)
+ * Redis-based webhook event idempotency tracker.
+ * Events are stored with a 24-hour TTL so they auto-expire.
+ * Falls back to in-memory Set if Redis is unavailable.
  */
+
+import Redis from "ioredis"
+
+const REDIS_KEY_PREFIX = "stripe:webhook:event:"
+const EVENT_TTL_SECONDS = 86400 // 24 hours
+
+let redis: Redis | null = null
+
+function getRedis(): Redis | null {
+  if (redis) return redis
+  const url = process.env.REDIS_URL
+  if (!url) return null
+  try {
+    redis = new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true })
+    redis.connect().catch(() => {
+      console.warn("[Stripe Utils] Redis connection failed, using in-memory fallback")
+      redis = null
+    })
+    return redis
+  } catch {
+    return null
+  }
+}
+
+// In-memory fallback
+const fallbackSet = new Set<string>()
+const FALLBACK_MAX = 1000
+
 export class WebhookEventTracker {
-  private static processedEvents = new Set<string>()
-  private static readonly MAX_EVENTS = 1000
-
-  static isProcessed(eventId: string): boolean {
-    return this.processedEvents.has(eventId)
-  }
-
-  static markAsProcessed(eventId: string): void {
-    this.processedEvents.add(eventId)
-    
-    // Clean up old events
-    if (this.processedEvents.size > this.MAX_EVENTS) {
-      const sorted = Array.from(this.processedEvents)
-      sorted.slice(0, sorted.length - this.MAX_EVENTS).forEach(id => 
-        this.processedEvents.delete(id)
-      )
+  static async isProcessed(eventId: string): Promise<boolean> {
+    const client = getRedis()
+    if (client) {
+      try {
+        const exists = await client.exists(`${REDIS_KEY_PREFIX}${eventId}`)
+        return exists === 1
+      } catch {
+        return fallbackSet.has(eventId)
+      }
     }
+    return fallbackSet.has(eventId)
   }
 
-  static reset(): void {
-    this.processedEvents.clear()
+  static async markAsProcessed(eventId: string): Promise<void> {
+    const client = getRedis()
+    if (client) {
+      try {
+        await client.set(`${REDIS_KEY_PREFIX}${eventId}`, "1", "EX", EVENT_TTL_SECONDS)
+        return
+      } catch {
+        // fall through to in-memory
+      }
+    }
+    fallbackSet.add(eventId)
+    if (fallbackSet.size > FALLBACK_MAX) {
+      const arr = Array.from(fallbackSet)
+      arr.slice(0, arr.length - FALLBACK_MAX).forEach(id => fallbackSet.delete(id))
+    }
   }
 }

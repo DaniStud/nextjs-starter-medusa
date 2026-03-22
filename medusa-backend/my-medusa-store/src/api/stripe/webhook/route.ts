@@ -1,12 +1,10 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import Stripe from "stripe"
+import { WebhookEventTracker } from "../utils"
 
 const stripe = new Stripe(process.env.STRIPE_API_KEY || "")
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-
-// Idempotency tracker (in-memory; consider Redis for production multi-instance deployments)
-const processedEvents = new Set<string>()
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const sig = req.headers["stripe-signature"] as string | undefined
@@ -30,9 +28,6 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   let event: Stripe.Event
   
-  // NOTE: Signature verification disabled for local development
-  // Medusa v2's rawBodyPaths config doesn't preserve raw body - it arrives pre-parsed
-  // For production: Use Stripe Dashboard webhooks (they don't require rawBody since they use endpoint secrets)
   const IS_LOCAL_DEV = process.env.NODE_ENV === 'development'
   
   if (IS_LOCAL_DEV) {
@@ -44,18 +39,17 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret)
         console.log("[Stripe Webhook] ✅ Signature verified successfully")
       } else {
-        console.warn("[Stripe Webhook] ⚠️ No signature verification (missing secret or signature)")
-        event = req.body as Stripe.Event
+        console.error("[Stripe Webhook] ❌ Missing webhook secret or signature in production")
+        return res.status(400).send("Webhook Error: Missing signature or secret")
       }
     } catch (err) {
-      console.error("[Stripe Webhook] ❌ Signature verification failed")
-      console.error("[Stripe Webhook] Error:", (err as Error).message)
+      console.error("[Stripe Webhook] ❌ Signature verification failed:", (err as Error).message)
       return res.status(400).send(`Webhook Error: ${(err as Error).message}`)
     }
   }
 
-  // Idempotency check: prevent duplicate processing
-  if (processedEvents.has(event.id)) {
+  // Idempotency check via Redis (with in-memory fallback)
+  if (await WebhookEventTracker.isProcessed(event.id)) {
     console.info(`[Stripe Webhook] Event ${event.id} already processed, skipping`)
     return res.json({ received: true, status: "duplicate" })
   }
@@ -67,20 +61,28 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       case "payment_intent.succeeded":
         await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, container)
         break
-      case "charge.succeeded":
-        // When using automatic capture, charge.succeeded fires instead of payment_intent.succeeded
-        // Extract payment_intent from the charge and handle it
+      case "charge.succeeded": {
         const charge = event.data.object as Stripe.Charge
         if (typeof charge.payment_intent === 'string') {
           const pi = await stripe.paymentIntents.retrieve(charge.payment_intent)
           await handlePaymentIntentSucceeded(pi, container)
         }
         break
+      }
       case "payment_intent.payment_failed":
         await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent, container)
         break
+      case "payment_intent.requires_action":
+        await handlePaymentIntentRequiresAction(event.data.object as Stripe.PaymentIntent, container)
+        break
+      case "payment_intent.canceled":
+        await handlePaymentIntentCanceled(event.data.object as Stripe.PaymentIntent, container)
+        break
       case "charge.refunded":
         await handleChargeRefunded(event.data.object as Stripe.Charge, container)
+        break
+      case "charge.dispute.created":
+        await handleChargeDisputeCreated(event.data.object as Stripe.Dispute, container)
         break
       case "checkout.session.completed":
         await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, container)
@@ -89,14 +91,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         console.info(`[Stripe Webhook] Unhandled event type: ${event.type}`)
     }
 
-    // Mark as processed
-    processedEvents.add(event.id)
-
-    // Clean up old events (keep last 1000)
-    if (processedEvents.size > 1000) {
-      const sorted = Array.from(processedEvents)
-      sorted.slice(0, sorted.length - 1000).forEach(id => processedEvents.delete(id))
-    }
+    // Mark as processed in Redis
+    await WebhookEventTracker.markAsProcessed(event.id)
   } catch (err) {
     console.error(`[Stripe Webhook] Error handling ${event.type}:`, err)
     return res.status(500).send()
@@ -293,10 +289,32 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   
-  // Log session reconciliation
   logger.info(`[Stripe Webhook] Checkout session completed: ${session.id}, payment_intent: ${session.payment_intent}`)
-  
-  // For basic checkout flow, payment_intent.succeeded will handle the order
-  // This is useful for payment link flows or custom checkout sessions
-  // Add custom logic here if needed
+}
+
+/**
+ * Handle payment intent requiring 3D Secure / SCA action.
+ * This is informational — the client-side handles the actual authentication flow.
+ */
+async function handlePaymentIntentRequiresAction(paymentIntent: Stripe.PaymentIntent, container: any) {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+  logger.info(`[Stripe Webhook] payment_intent.requires_action: ${paymentIntent.id} — awaiting customer authentication (3D Secure)`)
+}
+
+/**
+ * Handle canceled payment intent.
+ */
+async function handlePaymentIntentCanceled(paymentIntent: Stripe.PaymentIntent, container: any) {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+  logger.warn(`[Stripe Webhook] payment_intent.canceled: ${paymentIntent.id}, reason: ${paymentIntent.cancellation_reason || "unknown"}`)
+}
+
+/**
+ * Handle charge dispute created (fraud alert).
+ */
+async function handleChargeDisputeCreated(dispute: Stripe.Dispute, container: any) {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+  logger.error(`[Stripe Webhook] ⚠️ DISPUTE CREATED: ${dispute.id}, amount: ${dispute.amount}, reason: ${dispute.reason}, charge: ${dispute.charge}`)
+  // In production, this should trigger an alert to the store owner
+  // Consider integrating with email/Slack notifications here
 }
