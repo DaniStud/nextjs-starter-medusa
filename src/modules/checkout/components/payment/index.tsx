@@ -101,6 +101,19 @@ const Payment = ({
     }
   }
 
+  // Auto-initiate the first payment method when the step opens and no session exists yet
+  useEffect(() => {
+    if (
+      isOpen &&
+      !activeSession &&
+      !selectedPaymentMethod &&
+      availablePaymentMethods?.length > 0
+    ) {
+      const firstMethod = availablePaymentMethods[0]
+      setPaymentMethod(firstMethod.id)
+    }
+  }, [isOpen])
+
   useEffect(() => {
     setError(null)
   }, [isOpen])
@@ -135,7 +148,7 @@ const Payment = ({
       </div>
       <div>
         <div className={isOpen ? "block" : "hidden"}>
-          {!paidByGiftcard && availablePaymentMethods?.length && (
+          {!paidByGiftcard && availablePaymentMethods?.length > 0 && (
             <>
               <RadioGroup
                 value={selectedPaymentMethod}
@@ -162,6 +175,12 @@ const Payment = ({
                 ))}
               </RadioGroup>
             </>
+          )}
+
+          {!paidByGiftcard && availablePaymentMethods?.length === 0 && (
+            <Text className="txt-medium text-ui-fg-subtle">
+              No payment methods are available. Please contact support.
+            </Text>
           )}
 
           {paidByGiftcard && (
