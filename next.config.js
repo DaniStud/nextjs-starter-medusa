@@ -34,8 +34,8 @@ function buildCSP() {
     ]
       .filter(Boolean)
       .join(" "),
-    // Images: same-origin + Stripe card brand logos
-    "img-src 'self' data: blob: https://*.stripe.com",
+    // Images: same-origin + Stripe card brand logos + flag icons (react-country-flag)
+    "img-src 'self' data: blob: https://*.stripe.com https://cdn.jsdelivr.net",
     "font-src 'self' data:",
     "object-src 'none'",
     "base-uri 'self'",
