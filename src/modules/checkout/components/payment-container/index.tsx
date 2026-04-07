@@ -94,7 +94,7 @@ export const StripePaymentElementContainer = ({
               }}
               onChange={(e) => {
                 setPaymentReady(e.complete)
-                setError(e.message || null)
+                setError(e.complete ? null : "Please complete payment details")
               }}
             />
           </div>

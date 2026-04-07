@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout(props: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-mode="light">
+    <html lang="en">
       <body className="flex flex-col min-h-screen">
         <CookieConsentBanner />
         <main className="flex-grow relative">{props.children}</main>

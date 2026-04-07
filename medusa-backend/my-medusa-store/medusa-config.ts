@@ -10,8 +10,8 @@ module.exports = defineConfig({
       storeCors: process.env.STORE_CORS || "http://localhost:8000,https://localhost:8000",
       adminCors: process.env.ADMIN_CORS || "http://localhost:7001,https://localhost:7001",
       authCors: process.env.AUTH_CORS || "http://localhost:7001,https://localhost:7001",
-      jwtSecret: process.env.JWT_SECRET || "supersecret",
-      cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+      jwtSecret: process.env.JWT_SECRET!,
+      cookieSecret: process.env.COOKIE_SECRET!,
     }
   },
   modules: [
