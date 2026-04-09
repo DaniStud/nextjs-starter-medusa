@@ -33,6 +33,7 @@
     ".nyc_output",
     "coverage",
     "jest-coverage",
-    "src/services/shirtplatform.ts"
+    "src/services/shirtplatform.ts",
+    "medusa-backend"
   ]
 }
