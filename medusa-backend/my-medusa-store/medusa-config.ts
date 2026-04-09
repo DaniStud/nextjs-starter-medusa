@@ -34,5 +34,9 @@ module.exports = defineConfig({
       // Shirtplatform print-on-demand API client
       resolve: "./src/modules/shirtplatform",
     },
+    {
+      // Newsletter subscriber module
+      resolve: "./src/modules/newsletter",
+    },
   ],
 })

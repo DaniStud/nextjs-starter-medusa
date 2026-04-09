@@ -19,7 +19,8 @@ function buildCSP() {
     "default-src 'self'",
     // Stripe.js + m.stripe.network (Stripe fraud detection). 'unsafe-inline' is required
     // because Next.js injects inline hydration scripts that cannot be hashed ahead of time.
-    "script-src 'self' https://js.stripe.com https://m.stripe.network 'unsafe-inline'",
+    // 'unsafe-eval' is needed in development for Next.js Turbopack/HMR.
+    `script-src 'self' https://js.stripe.com https://m.stripe.network 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
     // Stripe PaymentElement injects inline styles for its UI
     "style-src 'self' 'unsafe-inline'",
     // Stripe's card/payment iframes
