@@ -22,7 +22,7 @@ export default async function ProductPreview({
   })
 
   return (
-    <div data-testid="product-wrapper">
+    <div data-testid="product-wrapper" className="flex flex-col">
       <LocalizedClientLink
         href={`/products/${product.handle}`}
         className="group"
@@ -34,20 +34,27 @@ export default async function ProductPreview({
           isFeatured={isFeatured}
         />
       </LocalizedClientLink>
-      <div className="flex txt-compact-medium mt-4 justify-between items-start gap-x-2">
+      <div className="grid grid-cols-2 mt-4 gap-x-4 items-center">
         <LocalizedClientLink
           href={`/products/${product.handle}`}
-          className="flex flex-col min-w-0"
+          className="flex flex-col gap-y-1 min-w-0"
         >
-          <Text className="text-ui-fg-subtle truncate" data-testid="product-title">
+          <Text
+            className="text-ui-fg-base font-heading font-bold uppercase text-sm tracking-wide truncate"
+            data-testid="product-title"
+          >
             {product.title}
           </Text>
-          <div className="flex items-center gap-x-2">
-            {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
-          </div>
+          {cheapestPrice && (
+            <div className="flex items-center gap-x-2">
+              <PreviewPrice price={cheapestPrice} />
+            </div>
+          )}
         </LocalizedClientLink>
         {countryCode && (
-          <QuickAddButton product={product} countryCode={countryCode} />
+          <div className="flex justify-end">
+            <QuickAddButton product={product} countryCode={countryCode} />
+          </div>
         )}
       </div>
     </div>

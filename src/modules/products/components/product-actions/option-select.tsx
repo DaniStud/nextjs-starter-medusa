@@ -1,6 +1,5 @@
 import { HttpTypes } from "@medusajs/types"
 import { clx } from "@medusajs/ui"
-import { t } from "@lib/i18n"
 import React from "react"
 
 type OptionSelectProps = {
@@ -23,33 +22,30 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
   const filteredOptions = (option.values ?? []).map((v) => v.value)
 
   return (
-    <div className="flex flex-col gap-y-3">
-      <span className="text-sm">{t("optionSelect.select", { title })}</span>
-      <div
-        className="flex flex-wrap justify-between gap-2"
-        data-testid={dataTestId}
-      >
-        {filteredOptions.map((v) => {
-          return (
-            <button
-              onClick={() => updateOption(option.id, v)}
-              key={v}
-              className={clx(
-                "border-ui-border-base bg-ui-bg-subtle border text-small-regular h-10 rounded-rounded p-2 flex-1 ",
-                {
-                  "border-ui-border-interactive": v === current,
-                  "hover:shadow-elevation-card-rest transition-shadow ease-in-out duration-150":
-                    v !== current,
-                }
-              )}
-              disabled={disabled}
-              data-testid="option-button"
-            >
-              {v}
-            </button>
-          )
-        })}
-      </div>
+    <div
+      className="flex flex-row flex-wrap gap-2"
+      data-testid={dataTestId}
+    >
+      {filteredOptions.map((v) => {
+        return (
+          <button
+            onClick={() => updateOption(option.id, v)}
+            key={v}
+            className={clx(
+              "flex-1 border border-stone-300 bg-white text-small-regular h-10 rounded-none px-5 py-2 transition-colors min-w-[3rem]",
+              {
+                "border-black text-black font-semibold z-10": v === current,
+                "hover:border-stone-400":
+                  v !== current,
+              }
+            )}
+            disabled={disabled}
+            data-testid="option-button"
+          >
+            {v}
+          </button>
+        )
+      })}
     </div>
   )
 }

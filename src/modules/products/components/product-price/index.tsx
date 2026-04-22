@@ -19,13 +19,13 @@ export default function ProductPrice({
   const selectedPrice = variant ? variantPrice : cheapestPrice
 
   if (!selectedPrice) {
-    return <div className="block w-32 h-9 bg-gray-100 animate-pulse" />
+    return <div className="block w-20 h-7 bg-gray-100 animate-pulse" />
   }
 
   return (
     <div className="flex flex-col text-ui-fg-base">
       <span
-        className={clx("text-xl-semi", {
+        className={clx("text-xl font-bold tracking-tight", {
           "text-ui-fg-interactive": selectedPrice.price_type === "sale",
         })}
       >

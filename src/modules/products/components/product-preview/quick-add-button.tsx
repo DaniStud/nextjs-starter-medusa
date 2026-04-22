@@ -79,18 +79,16 @@ export default function QuickAddButton({
       <button
         onClick={handleClick}
         disabled={isAdding || variants.length === 0}
-        className="whitespace-nowrap rounded-full bg-ui-fg-base text-white text-xs font-medium px-3 py-1.5 hover:bg-ui-fg-base/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-none bg-[#ed1d27] hover:bg-[#c4161f] text-white text-xs md:text-sm font-semibold px-3 md:px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         data-testid="quick-add-button"
       >
         {isAdding
           ? t("quickAdd.adding")
-          : isSingleVariant
-            ? t("quickAdd.addToCart")
-            : t("quickAdd.selectSize")}
+          : t("quickAdd.addToCart")}
       </button>
 
       {showSizes && !isSingleVariant && (
-        <div className="absolute right-0 bottom-full mb-2 z-30 bg-white rounded-lg shadow-lg border border-gray-200 p-2 min-w-[140px]">
+        <div className="absolute right-0 left-0 bottom-full mb-2 z-30 bg-white rounded-none border border-stone-300 p-2 min-w-[140px]">
           <p className="text-xs text-ui-fg-muted px-2 pb-1.5 font-medium">
             {t("quickAdd.selectSize")}
           </p>
@@ -102,7 +100,7 @@ export default function QuickAddButton({
                   key={variant.id}
                   onClick={() => variant.id && handleAdd(variant.id)}
                   disabled={!inStock || isAdding}
-                  className="text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="text-left text-sm px-2 py-1.5 rounded-none hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   data-testid={`quick-add-variant-${variant.id}`}
                 >
                   {getVariantLabel(variant)}

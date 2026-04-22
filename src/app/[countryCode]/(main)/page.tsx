@@ -41,7 +41,7 @@ export default async function Home(props: {
       <ScrollReveal delay={100}>
         <div className="py-12">
           <ul className="flex flex-col gap-x-6">
-            <FeaturedProducts collections={collections} region={region} />
+            <FeaturedProducts collections={collections} region={region} countryCode={countryCode} />
           </ul>
         </div>
       </ScrollReveal>

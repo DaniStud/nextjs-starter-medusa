@@ -52,11 +52,22 @@
 @layer components {
   .content-container {
     @apply w-full mx-auto px-6;
-    max-width: min(66vw, 1400px);
+    max-width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .content-container {
+      max-width: min(66vw, 1400px);
+    }
   }
 
   .contrast-btn {
-    @apply px-4 py-2 border border-brand rounded-full text-brand hover:bg-brand hover:text-white transition-colors duration-200 ease-in;
+    @apply px-4 py-2 border rounded-full hover:text-white transition-colors duration-200 ease-in;
+    border-color: #ed1d27;
+    color: #ed1d27;
+  }
+  .contrast-btn:hover {
+    background-color: #ed1d27;
   }
 
   .text-xsmall-regular {

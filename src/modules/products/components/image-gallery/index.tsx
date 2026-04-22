@@ -4,7 +4,7 @@ import { HttpTypes } from "@medusajs/types"
 import { Container } from "@medusajs/ui"
 import { t } from "@lib/i18n"
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useRef, useCallback } from "react"
 
 type ImageGalleryProps = {
   images: HttpTypes.StoreProductImage[]
@@ -12,15 +12,44 @@ type ImageGalleryProps = {
 
 const ImageGallery = ({ images }: ImageGalleryProps) => {
   const [current, setCurrent] = useState(0)
+  const touchStartX = useRef(0)
+  const touchEndX = useRef(0)
 
-  const prev = () => setCurrent((i) => (i === 0 ? images.length - 1 : i - 1))
-  const next = () => setCurrent((i) => (i === images.length - 1 ? 0 : i + 1))
+  const goTo = useCallback(
+    (index: number) => {
+      if (index < 0) setCurrent(images.length - 1)
+      else if (index >= images.length) setCurrent(0)
+      else setCurrent(index)
+    },
+    [images.length]
+  )
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX
+  }
+
+  const onTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) goTo(current + 1)
+      else goTo(current - 1)
+    }
+  }
 
   return (
-    <div className="flex flex-col gap-y-4">
-      {/* Main image */}
-      <div className="relative">
-        <Container className="relative aspect-[29/34] w-full overflow-hidden bg-ui-bg-subtle">
+    <div className="flex flex-col">
+      {/* Main image with swipe support */}
+      <div
+        className="relative cursor-grab active:cursor-grabbing"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <Container className="relative aspect-[29/34] md:aspect-[4/5] w-full overflow-hidden bg-ui-bg-subtle !shadow-none !border-none">
           {!!images[current]?.url && (
             <Image
               src={images[current].url}
@@ -28,58 +57,50 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
               className="absolute inset-0 rounded-rounded"
               alt={t("imageGallery.productImage", { n: current + 1 })}
               fill
-              sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
+              sizes="(max-width: 767px) calc(100vw - 48px), (max-width: 1023px) calc(66vw - 48px), calc(33vw - 48px)"
               style={{ objectFit: "cover" }}
             />
           )}
         </Container>
 
+        {/* Navigation arrows */}
         {images.length > 1 && (
           <>
             <button
-              onClick={prev}
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-8 h-8 flex items-center justify-center shadow text-ui-fg-base"
+              onClick={() => goTo(current - 1)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-none w-12 h-12 flex items-center justify-center text-ui-fg-base transition-colors text-xl"
               aria-label={t("imageGallery.prevImage")}
             >
               &#8249;
             </button>
             <button
-              onClick={next}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-8 h-8 flex items-center justify-center shadow text-ui-fg-base"
+              onClick={() => goTo(current + 1)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-none w-12 h-12 flex items-center justify-center text-ui-fg-base transition-colors text-xl"
               aria-label={t("imageGallery.nextImage")}
             >
               &#8250;
             </button>
           </>
         )}
-      </div>
 
-      {/* Thumbnails */}
-      {images.length > 1 && (
-        <div className="flex gap-x-2 overflow-x-auto">
-          {images.map((image, index) => (
-            <button
-              key={image.id}
-              onClick={() => setCurrent(index)}
-              className={`relative w-16 h-16 flex-shrink-0 rounded overflow-hidden border-2 ${
-                index === current
-                  ? "border-ui-fg-base"
-                  : "border-transparent opacity-60 hover:opacity-100"
-              }`}
-            >
-              {!!image.url && (
-                <Image
-                  src={image.url}
-                  alt={t("imageGallery.thumbnail", { n: index + 1 })}
-                  fill
-                  sizes="64px"
-                  style={{ objectFit: "cover" }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
+        {/* Indicator lines - overlaid at bottom of image */}
+        {images.length > 1 && (
+          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-x-2 py-4">
+            {images.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrent(index)}
+                aria-label={t("imageGallery.thumbnail", { n: index + 1 })}
+                className={`h-[3px] rounded-full transition-all duration-300 ${
+                  index === current
+                    ? "w-8 bg-[#ed1d27]"
+                    : "w-4 bg-stone-300 hover:bg-stone-400"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

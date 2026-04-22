@@ -25,11 +25,30 @@ const CartDropdown = ({
   return (
     <div className="h-full z-50">
       <button
-        className="h-full hover:text-ui-fg-base"
+        className="h-full hover:text-ui-fg-base relative flex items-center"
         onClick={openDrawer}
         data-testid="nav-cart-link"
+        aria-label={t("nav.cart", { count: totalItems })}
       >
-        {t("nav.cart", { count: totalItems })}
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 01-8 0" />
+        </svg>
+        {totalItems > 0 && (
+          <span className="absolute -top-1 -right-2 bg-[#ed1d27] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+            {totalItems}
+          </span>
+        )}
       </button>
     </div>
   )
