@@ -45,7 +45,7 @@ const CartDropdown = ({
           <path d="M16 10a4 4 0 01-8 0" />
         </svg>
         {totalItems > 0 && (
-          <span className="absolute -top-1 -right-2 bg-[#ed1d27] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+          <span className="absolute -right-1.5 bg-brand text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full" style={{ top: "0.8rem" }}>
             {totalItems}
           </span>
         )}

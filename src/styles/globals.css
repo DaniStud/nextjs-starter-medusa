@@ -127,14 +127,24 @@
 
 /* Override Medusa UI CSS variables — single source of truth for brand colors */
 :root {
+  /* Primary buttons (inverted variant = default <Button>) */
   --button-inverted: #ed1d27;
   --button-inverted-hover: #c4161f;
   --button-inverted-pressed: #a01219;
+  --fg-on-inverted: #ffffff;
+
+  /* Neutral buttons */
+  --button-neutral: #ed1d27;
+  --button-neutral-hover: #c4161f;
+  --button-neutral-pressed: #a01219;
+  --fg-on-color: #ffffff;
+
+  /* Interactive accents */
   --bg-interactive: #ed1d27;
   --border-interactive: #ed1d27;
 }
 
 /* Round all Medusa UI buttons globally */
 button[class*="shadow-buttons-"] {
-  border-radius: 9999px !important;
+  border-radius: 9999px;
 }

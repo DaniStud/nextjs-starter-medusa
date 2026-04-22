@@ -93,7 +93,7 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
                 aria-label={t("imageGallery.thumbnail", { n: index + 1 })}
                 className={`h-[3px] rounded-full transition-all duration-300 ${
                   index === current
-                    ? "w-8 bg-[#ed1d27]"
+                    ? "w-8 bg-brand"
                     : "w-4 bg-stone-300 hover:bg-stone-400"
                 }`}
               />

@@ -13,7 +13,7 @@ export default async function Nav() {
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
-      <header className="relative h-16 mx-auto border-b duration-200 bg-white border-ui-border-base">
+        <header className="relative h-24 mx-auto border-b duration-200 bg-white border-ui-border-base">
         <nav className="content-container txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
           <div className="flex items-center gap-x-6 h-full">
             <div className="h-full">
@@ -21,13 +21,13 @@ export default async function Nav() {
             </div>
             <LocalizedClientLink
               href="/store"
-              className="hidden small:block text-[#ed1d27] font-medium text-sm uppercase tracking-wide hover:text-[#c4161f] transition-colors"
+              className="hidden small:block text-brand font-medium text-sm uppercase tracking-wide hover:text-brand-dark transition-colors"
             >
               {t("nav.store")}
             </LocalizedClientLink>
             <LocalizedClientLink
               href="/about"
-              className="hidden small:block text-[#ed1d27] font-medium text-sm uppercase tracking-wide hover:text-[#c4161f] transition-colors"
+              className="hidden small:block text-brand font-medium text-sm uppercase tracking-wide hover:text-brand-dark transition-colors"
             >
               {t("nav.about")}
             </LocalizedClientLink>
@@ -42,9 +42,9 @@ export default async function Nav() {
               <Image
                 src="/images/10shirt-logo.png"
                 alt={t("nav.brand")}
-                width={120}
-                height={40}
-                className="h-10 w-auto object-contain"
+                width={400}
+                height={100}
+                className="h-20 w-auto object-contain"
                 priority
               />
             </LocalizedClientLink>

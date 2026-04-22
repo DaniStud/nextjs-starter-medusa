@@ -13,6 +13,7 @@ import { HttpTypes } from "@medusajs/types"
 const SideMenuItems = [
   { key: "home", label: t("sideMenu.home"), href: "/" },
   { key: "store", label: t("sideMenu.store"), href: "/store" },
+  { key: "about", label: t("nav.about"), href: "/about" },
   { key: "cart", label: t("sideMenu.cart"), href: "/cart" },
 ]
 
@@ -20,8 +21,7 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
   const toggleState = useToggleState()
 
   return (
-    <div className="h-full">
-      <div className="flex items-center h-full">
+    <div className="h-full small:hidden flex items-center">
         <Popover className="h-full flex">
           {({ open, close }) => (
             <>
@@ -58,7 +58,7 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                 leaveFrom="opacity-100 backdrop-blur-2xl"
                 leaveTo="opacity-0"
               >
-                <PopoverPanel className="flex flex-col absolute w-full pr-4 sm:pr-0 sm:w-1/3 2xl:w-1/4 sm:min-w-min h-[calc(100vh-1rem)] z-30 inset-x-0 text-sm text-ui-fg-on-color m-2 backdrop-blur-2xl">
+                <PopoverPanel className="flex flex-col fixed inset-0 w-full z-[60] text-sm text-ui-fg-on-color backdrop-blur-2xl">
                   <div
                     data-testid="nav-menu-popup"
                     className="flex flex-col h-full bg-[rgba(3,7,18,0.5)] rounded-rounded justify-between p-6"
@@ -113,7 +113,6 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
             </>
           )}
         </Popover>
-      </div>
     </div>
   )
 }

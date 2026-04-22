@@ -79,7 +79,7 @@ export default function QuickAddButton({
       <button
         onClick={handleClick}
         disabled={isAdding || variants.length === 0}
-        className="w-full rounded-none bg-[#ed1d27] hover:bg-[#c4161f] text-white text-xs md:text-sm font-semibold px-3 md:px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-none bg-brand hover:bg-brand-dark text-white text-xs md:text-sm font-semibold px-3 md:px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         data-testid="quick-add-button"
       >
         {isAdding

@@ -194,7 +194,7 @@ export default function ProductActions({
               isAdding ||
               !isValidVariant
             }
-            className="flex-1 bg-[#ed1d27] hover:bg-[#c4161f] text-white py-4 text-base font-semibold rounded-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 bg-brand hover:bg-brand-dark text-white py-4 text-base font-semibold rounded-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             data-testid="add-product-button"
           >
             {isAdding
