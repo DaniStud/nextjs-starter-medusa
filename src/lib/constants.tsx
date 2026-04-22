@@ -4,6 +4,7 @@ import { CreditCard } from "@medusajs/icons"
 import Ideal from "@modules/common/icons/ideal"
 import Bancontact from "@modules/common/icons/bancontact"
 import PayPal from "@modules/common/icons/paypal"
+import { t } from "@lib/i18n"
 
 /* Map of payment provider_id to their title and icon. Add in any payment providers you want to use. */
 export const paymentInfoMap: Record<
@@ -11,23 +12,23 @@ export const paymentInfoMap: Record<
   { title: string; icon: React.JSX.Element }
 > = {
   pp_stripe_stripe: {
-    title: "Credit card",
+    title: t("payment.creditCard"),
     icon: <CreditCard />,
   },
   "pp_stripe-ideal_stripe": {
-    title: "iDeal",
+    title: t("payment.iDeal"),
     icon: <Ideal />,
   },
   "pp_stripe-bancontact_stripe": {
-    title: "Bancontact",
+    title: t("payment.bancontact"),
     icon: <Bancontact />,
   },
   pp_paypal_paypal: {
-    title: "PayPal",
+    title: t("payment.paypal"),
     icon: <PayPal />,
   },
   pp_system_default: {
-    title: "Manual Payment",
+    title: t("payment.manual"),
     icon: <CreditCard />,
   },
   // Add more payment providers here

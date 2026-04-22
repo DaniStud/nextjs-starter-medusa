@@ -51,11 +51,12 @@
 
 @layer components {
   .content-container {
-    @apply max-w-[1440px] w-full mx-auto px-6;
+    @apply w-full mx-auto px-6;
+    max-width: min(66vw, 1400px);
   }
 
   .contrast-btn {
-    @apply px-4 py-2 border border-black rounded-full hover:bg-black hover:text-white transition-colors duration-200 ease-in;
+    @apply px-4 py-2 border border-brand rounded-full text-brand hover:bg-brand hover:text-white transition-colors duration-200 ease-in;
   }
 
   .text-xsmall-regular {
@@ -109,4 +110,20 @@
   .text-3xl-semi {
     @apply text-[32px] leading-[44px] font-semibold;
   }
+}
+
+/* ── 10SHRTS brand overrides ── */
+
+/* Override Medusa UI CSS variables — single source of truth for brand colors */
+:root {
+  --button-inverted: #ed1d27;
+  --button-inverted-hover: #c4161f;
+  --button-inverted-pressed: #a01219;
+  --bg-interactive: #ed1d27;
+  --border-interactive: #ed1d27;
+}
+
+/* Round all Medusa UI buttons globally */
+button[class*="shadow-buttons-"] {
+  border-radius: 9999px !important;
 }

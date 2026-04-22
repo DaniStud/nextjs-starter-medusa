@@ -2,6 +2,7 @@
 
 import { convertToLocale } from "@lib/util/money"
 import { CheckCircleSolid, XMark } from "@medusajs/icons"
+import { t } from "@lib/i18n"
 import {
   HttpTypes,
   StoreCart,
@@ -149,10 +150,10 @@ function FreeShippingInline({
             {price.target_reached ? (
               <div className="flex items-center gap-1.5">
                 <CheckCircleSolid className="text-green-500 inline-block" />{" "}
-                Free Shipping unlocked!
+                {t("shipping.unlocked")}
               </div>
             ) : (
-              `Unlock Free Shipping`
+              t("shipping.unlock")
             )}
           </div>
 
@@ -161,14 +162,10 @@ function FreeShippingInline({
               "opacity-0 invisible": price.target_reached,
             })}
           >
-            Only{" "}
-            <span className="text-neutral-950">
-              {convertToLocale({
+            {t("shipping.onlyAway", { amount: convertToLocale({
                 amount: price.target_remaining,
                 currency_code: cart.currency_code,
-              })}
-            </span>{" "}
-            away
+              }) })}
           </div>
         </div>
         <div className="flex justify-between gap-1">
@@ -225,10 +222,10 @@ function FreeShippingPopup({
                 {price.target_reached ? (
                   <div className="flex items-center gap-1.5">
                     <CheckCircleSolid className="text-green-500 inline-block" />{" "}
-                    Free Shipping unlocked!
+                    {t("shipping.unlocked")}
                   </div>
                 ) : (
-                  `Unlock Free Shipping`
+                  t("shipping.unlock")
                 )}
               </div>
 
@@ -237,14 +234,10 @@ function FreeShippingPopup({
                   "opacity-0 invisible": price.target_reached,
                 })}
               >
-                Only{" "}
-                <span className="text-white">
-                  {convertToLocale({
+                {t("shipping.onlyAway", { amount: convertToLocale({
                     amount: price.target_remaining,
                     currency_code: cart.currency_code,
-                  })}
-                </span>{" "}
-                away
+                  }) })}
               </div>
             </div>
             <div className="flex justify-between gap-1">
@@ -267,14 +260,14 @@ function FreeShippingPopup({
             className="rounded-2xl bg-transparent shadow-none outline-none border-[1px] border-white text-[15px] py-2.5 px-4"
             href="/cart"
           >
-            View cart
+            {t("shipping.viewCart")}
           </LocalizedClientLink>
 
           <LocalizedClientLink
             className="flex-grow rounded-2xl bg-white text-neutral-950 shadow-none outline-none border-[1px] border-white text-[15px] py-2.5 px-4 text-center"
             href="/store"
           >
-            View products
+            {t("shipping.viewProducts")}
           </LocalizedClientLink>
         </div>
       </div>

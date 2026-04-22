@@ -1,5 +1,6 @@
 import { Heading } from "@medusajs/ui"
 import { cookies as nextCookies } from "next/headers"
+import { t } from "@lib/i18n"
 
 import CartTotals from "@modules/common/components/cart-totals"
 import Help from "@modules/order/components/help"
@@ -33,12 +34,12 @@ export default async function OrderCompletedTemplate({
             level="h1"
             className="flex flex-col gap-y-3 text-ui-fg-base text-3xl mb-4"
           >
-            <span>Thank you!</span>
-            <span>Your order was placed successfully.</span>
+            <span>{t("order.thankYou")}</span>
+            <span>{t("order.placedSuccessfully")}</span>
           </Heading>
           <OrderDetails order={order} />
           <Heading level="h2" className="flex flex-row text-3xl-regular">
-            Summary
+            {t("order.summary")}
           </Heading>
           <Items order={order} />
           <CartTotals totals={order} />

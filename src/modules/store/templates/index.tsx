@@ -1,7 +1,7 @@
 import { Suspense } from "react"
+import { t } from "@lib/i18n"
 
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
-import RefinementList from "@modules/store/components/refinement-list"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
 import PaginatedProducts from "./paginated-products"
@@ -20,14 +20,17 @@ const StoreTemplate = ({
 
   return (
     <div
-      className="flex flex-col small:flex-row small:items-start py-6 content-container"
+      className="flex flex-col py-6 content-container min-w-[90%]"
       data-testid="category-container"
     >
-      <RefinementList sortBy={sort} />
-      <div className="w-full">
-        <div className="mb-8 text-2xl-semi">
-          <h1 data-testid="store-page-title">All products</h1>
+      <div className="flex flex-row items-center justify-between w-full mb-8">
+        <div className="text-2xl-semi">
+          <h1 data-testid="store-page-title">{t("store.allProducts")}</h1>
         </div>
+        {/* RefinementList (Sort by) has been removed from here */}
+      </div>
+
+      <div className="w-full">
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts
             sortBy={sort}
@@ -40,4 +43,4 @@ const StoreTemplate = ({
   )
 }
 
-export default StoreTemplate
+export default StoreTemplate  

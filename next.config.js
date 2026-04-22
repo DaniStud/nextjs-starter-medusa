@@ -23,8 +23,8 @@ function buildCSP() {
     `script-src 'self' https://js.stripe.com https://m.stripe.network 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
     // Stripe PaymentElement injects inline styles for its UI
     "style-src 'self' 'unsafe-inline'",
-    // Stripe's card/payment iframes
-    "frame-src https://js.stripe.com https://hooks.stripe.com https://m.stripe.network https://m.stripe.com",
+    // Stripe's card/payment iframes + MobilePay redirect
+    "frame-src https://js.stripe.com https://hooks.stripe.com https://m.stripe.network https://m.stripe.com https://*.mobilepay.dk",
     // API calls: Stripe payment confirmation + Medusa backend (client-side SDK calls)
     [
       "connect-src 'self'",

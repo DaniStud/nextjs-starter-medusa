@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { t } from "@lib/i18n"
 
 export type NativeSelectProps = {
   placeholder?: string
@@ -17,7 +18,7 @@ export type NativeSelectProps = {
 
 const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
   (
-    { placeholder = "Select...", defaultValue, className, children, ...props },
+    { placeholder = t("nativeSelect.placeholder"), defaultValue, className, children, ...props },
     ref
   ) => {
     const innerRef = useRef<HTMLSelectElement>(null)

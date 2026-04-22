@@ -4,6 +4,7 @@
 import React, { useEffect } from "react";
 import "vanilla-cookieconsent/dist/cookieconsent.css";
 import * as CookieConsent from "vanilla-cookieconsent";
+import { t } from "@lib/i18n";
 
 export default function CookieConsentBanner() {
   const [fallbackVisible, setFallbackVisible] = React.useState(false)
@@ -26,25 +27,25 @@ export default function CookieConsentBanner() {
           marketing: {},
         },
         language: {
-          default: "en",
+          default: "da",
           translations: {
-            en: {
+            da: {
               consentModal: {
-                title: "We use cookies",
-                description: "We use cookies to improve your experience. Analytics and marketing cookies are optional.",
-                acceptAllBtn: "Accept all",
-                acceptNecessaryBtn: "Reject non-essential",
-                showPreferencesBtn: "Manage preferences",
+                title: t("cookies.consentModal.title"),
+                description: t("cookies.consentModal.description"),
+                acceptAllBtn: t("cookies.consentModal.acceptAllBtn"),
+                acceptNecessaryBtn: t("cookies.consentModal.acceptNecessaryBtn"),
+                showPreferencesBtn: t("cookies.consentModal.showPreferencesBtn"),
               },
               preferencesModal: {
-                title: "Cookie preferences",
-                acceptAllBtn: "Accept all",
-                acceptNecessaryBtn: "Reject non-essential",
-                savePreferencesBtn: "Save preferences",
+                title: t("cookies.preferencesModal.title"),
+                acceptAllBtn: t("cookies.preferencesModal.acceptAllBtn"),
+                acceptNecessaryBtn: t("cookies.preferencesModal.acceptNecessaryBtn"),
+                savePreferencesBtn: t("cookies.preferencesModal.savePreferencesBtn"),
                 sections: [
-                  { title: "Necessary cookies", description: "Required for the store to function.", linkedCategory: "necessary" },
-                  { title: "Analytics", linkedCategory: "analytics" },
-                  { title: "Marketing", linkedCategory: "marketing" },
+                  { title: t("cookies.preferencesModal.sections.necessary"), description: t("cookies.preferencesModal.sections.necessaryDesc"), linkedCategory: "necessary" },
+                  { title: t("cookies.preferencesModal.sections.analytics"), linkedCategory: "analytics" },
+                  { title: t("cookies.preferencesModal.sections.marketing"), linkedCategory: "marketing" },
                 ],
               },
             },
@@ -83,11 +84,11 @@ export default function CookieConsentBanner() {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={() => setFallbackVisible(false)} />
       <div className="relative bg-white rounded-lg shadow-lg max-w-lg w-[90%] p-6">
-        <h3 className="text-lg font-semibold">We use cookies</h3>
-        <p className="mt-2 text-sm text-neutral-600">We use cookies to improve your experience. Analytics and marketing cookies are optional.</p>
+        <h3 className="text-lg font-semibold">{t("cookies.consentModal.title")}</h3>
+        <p className="mt-2 text-sm text-neutral-600">{t("cookies.consentModal.description")}</p>
         <div className="mt-4 flex gap-2">
-          <button onClick={acceptAllFallback} className="px-4 py-2 bg-ui-foreground text-white rounded">Accept all</button>
-          <button onClick={rejectNonEssentialFallback} className="px-4 py-2 border rounded">Reject non-essential</button>
+          <button onClick={acceptAllFallback} className="px-4 py-2 bg-ui-foreground text-white rounded">{t("cookies.consentModal.acceptAllBtn")}</button>
+          <button onClick={rejectNonEssentialFallback} className="px-4 py-2 border rounded">{t("cookies.consentModal.acceptNecessaryBtn")}</button>
         </div>
       </div>
     </div>

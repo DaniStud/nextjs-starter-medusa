@@ -4,8 +4,8 @@ import NewsletterModuleService from "../../../../modules/newsletter/service"
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const { name, email } = req.body as { name?: string; email?: string }
 
-  if (!name || !email) {
-    res.status(400).json({ message: "Name and email are required." })
+  if (!email) {
+    res.status(400).json({ message: "Email is required." })
     return
   }
 
@@ -28,7 +28,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   const subscriber = await newsletterService.createNewsletterSubscribers({
-    name: name.trim(),
+    name: name?.trim() || "",
     email: email.trim().toLowerCase(),
   })
 

@@ -1,6 +1,7 @@
 "use client"
 
 import FilterRadioGroup from "@modules/common/components/filter-radio-group"
+import { t } from "@lib/i18n"
 
 export type SortOptions = "price_asc" | "price_desc" | "created_at"
 
@@ -13,15 +14,15 @@ type SortProductsProps = {
 const sortOptions = [
   {
     value: "created_at",
-    label: "Latest Arrivals",
+    label: t("store.latestArrivals"),
   },
   {
     value: "price_asc",
-    label: "Price: Low -> High",
+    label: t("store.priceLowHigh"),
   },
   {
     value: "price_desc",
-    label: "Price: High -> Low",
+    label: t("store.priceHighLow"),
   },
 ]
 
@@ -36,7 +37,7 @@ const SortProducts = ({
 
   return (
     <FilterRadioGroup
-      title="Sort by"
+      title={t("store.sortBy")}
       items={sortOptions}
       value={sortBy}
       handleChange={handleChange}

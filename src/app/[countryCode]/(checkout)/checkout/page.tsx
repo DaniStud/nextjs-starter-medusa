@@ -6,9 +6,10 @@ import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import StripeReturnHandler from "@modules/checkout/components/stripe-return-handler"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { t } from "@lib/i18n"
 
 export const metadata: Metadata = {
-  title: "Checkout",
+  title: t("meta.checkout.title"),
 }
 
 export default async function Checkout({
@@ -28,7 +29,7 @@ export default async function Checkout({
     (params.payment_intent_client_secret as string) || null
 
   return (
-    <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-40 py-12">
+    <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-y-8 small:gap-x-12 py-12">
       <PaymentWrapper cart={cart}>
         {paymentIntentClientSecret ? (
           <StripeReturnHandler clientSecret={paymentIntentClientSecret} />

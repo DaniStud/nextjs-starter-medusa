@@ -6,6 +6,7 @@ import { listRegions } from "@lib/data/regions"
 import { StoreRegion } from "@medusajs/types"
 import CategoryTemplate from "@modules/categories/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { t } from "@lib/i18n"
 
 type Props = {
   params: Promise<{ category: string[]; countryCode: string }>
@@ -54,12 +55,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   try {
     const productCategory = await getCategoryByHandle(params.category)
 
-    const title = productCategory.name + " | Medusa Store"
+    const title = productCategory.name + " | 10SHRTS"
 
-    const description = productCategory.description ?? `${title} category.`
+    const description = productCategory.description ?? `${title} ${t("meta.category.suffix")}`
 
     return {
-      title: `${title} | Medusa Store`,
+      title: `${title} | 10SHRTS`,
       description,
       alternates: {
         canonical: `${params.category.join("/")}`,

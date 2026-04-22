@@ -9,6 +9,7 @@ import SkeletonCardDetails from "@modules/skeletons/components/skeleton-card-det
 import { PaymentElement } from "@stripe/react-stripe-js"
 import PaymentTest from "../payment-test"
 import { StripeContext } from "../payment-wrapper/stripe-wrapper"
+import { t } from "@lib/i18n"
 
 type PaymentContainerProps = {
   paymentProviderId: string
@@ -33,7 +34,7 @@ const PaymentContainer: React.FC<PaymentContainerProps> = ({
       value={paymentProviderId}
       disabled={disabled}
       className={clx(
-        "flex flex-col gap-y-2 text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
+        "flex flex-col gap-y-2 text-small-regular cursor-pointer py-4 border rounded-rounded px-4 small:px-8 mb-2 hover:shadow-borders-interactive-with-active",
         {
           "border-ui-border-interactive":
             selectedPaymentOptionId === paymentProviderId,
@@ -94,7 +95,7 @@ export const StripePaymentElementContainer = ({
               }}
               onChange={(e) => {
                 setPaymentReady(e.complete)
-                setError(e.complete ? null : "Please complete payment details")
+                setError(e.complete ? null : t("checkout.completePayment"))
               }}
             />
           </div>

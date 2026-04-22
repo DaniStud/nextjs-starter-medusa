@@ -3,6 +3,7 @@
 import { acceptTransferRequest, declineTransferRequest } from "@lib/data/orders"
 import { Button, Text } from "@medusajs/ui"
 import { useState } from "react"
+import { t } from "@lib/i18n"
 
 type TransferStatus = "pending" | "success" | "error"
 
@@ -40,12 +41,12 @@ const TransferActions = ({ id, token }: { id: string; token: string }) => {
     <div className="flex flex-col gap-y-4">
       {status?.accept === "success" && (
         <Text className="text-emerald-500">
-          Order transferred successfully!
+          {t("order.transferSuccess")}
         </Text>
       )}
       {status?.decline === "success" && (
         <Text className="text-emerald-500">
-          Order transfer declined successfully!
+          {t("order.transferDeclined")}
         </Text>
       )}
       {status?.accept !== "success" && status?.decline !== "success" && (
@@ -58,7 +59,7 @@ const TransferActions = ({ id, token }: { id: string; token: string }) => {
               status?.accept === "pending" || status?.decline === "pending"
             }
           >
-            Accept transfer
+            {t("order.acceptTransfer")}
           </Button>
           <Button
             size="large"
@@ -69,7 +70,7 @@ const TransferActions = ({ id, token }: { id: string; token: string }) => {
               status?.accept === "pending" || status?.decline === "pending"
             }
           >
-            Decline transfer
+            {t("order.declineTransfer")}
           </Button>
         </div>
       )}

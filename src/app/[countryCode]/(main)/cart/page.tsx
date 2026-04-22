@@ -3,10 +3,11 @@ import { retrieveCustomer } from "@lib/data/customer"
 import CartTemplate from "@modules/cart/templates"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { t } from "@lib/i18n"
 
 export const metadata: Metadata = {
-  title: "Cart",
-  description: "View your cart",
+  title: t("meta.cart.title"),
+  description: t("meta.cart.description"),
 }
 
 export default async function Cart() {

@@ -6,6 +6,7 @@ import { listRegions } from "@lib/data/regions"
 import { StoreCollection, StoreRegion } from "@medusajs/types"
 import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { t } from "@lib/i18n"
 
 type Props = {
   params: Promise<{ handle: string; countryCode: string }>
@@ -65,8 +66,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const metadata = {
-    title: `${collection.title} | Medusa Store`,
-    description: `${collection.title} collection`,
+    title: `${collection.title} | 10SHRTS`,
+    description: `${collection.title} ${t("meta.collection.suffix")}`,
   } as Metadata
 
   return metadata

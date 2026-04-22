@@ -5,6 +5,7 @@ import { useIntersection } from "@lib/hooks/use-in-view"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
+import { t } from "@lib/i18n"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
@@ -35,11 +36,21 @@ export default function ProductActions({
   const [isAdding, setIsAdding] = useState(false)
   const countryCode = useParams().countryCode as string
 
-  // If there is only 1 variant, preselect the options
+  // Preselect options: single variant or default to "Small"
   useEffect(() => {
     if (product.variants?.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
       setOptions(variantOptions ?? {})
+    } else if (product.variants && product.variants.length > 1) {
+      const smallVariant = product.variants.find((v) =>
+        v.options?.some(
+          (o) => o.value?.toLowerCase() === "s" || o.value?.toLowerCase() === "small"
+        )
+      )
+      if (smallVariant) {
+        const variantOptions = optionsAsKeymap(smallVariant.options)
+        setOptions(variantOptions ?? {})
+      }
     }
   }, [product.variants])
 
@@ -155,10 +166,10 @@ export default function ProductActions({
           data-testid="add-product-button"
         >
           {!selectedVariant && !options
-            ? "Select variant"
+            ? t("productActions.selectVariant")
             : !inStock || !isValidVariant
-            ? "Out of stock"
-            : "Add to cart"}
+            ? t("productActions.outOfStock")
+            : t("productActions.addToCart")}
         </Button>
         <MobileActions
           product={product}

@@ -10,7 +10,9 @@ import ShirtplatformModuleService from "../modules/shirtplatform/service"
  *   1. Retrieve the Medusa order with all required relations
  *   2. Match the shipping country to a Shirtplatform country ID
  *   3. Create a base order on Shirtplatform
- *   4. Add each line item using usingBaseProduct (pre-designed products, no CreatorSE)
+ *   4. Add each line item:
+ *      - If variant metadata has `shirtplatform_motive_id` → use CreatorSE (dynamic design)
+ *      - Otherwise → use usingBaseProduct (pre-designed products)
  *   5. Commit the order to production
  *   6. Store the Shirtplatform order ID in Medusa order metadata
  *
@@ -109,6 +111,10 @@ export default async function shirtplatformOrderForwardingHandler({
       uniqueId: orderId,
       financialStatus: "PAID",
       customer: customerPayload,
+      orderShipping: {
+        title: "Standard Shipping",
+        carrier: { id: 872 }, // Generic Standard
+      },
       ...(shirtplatformCountryId ? { country: { id: shirtplatformCountryId } } : {}),
     }
 
@@ -127,6 +133,10 @@ export default async function shirtplatformOrderForwardingHandler({
       const spProductId = meta.shirtplatform_product_id
       const spColorId = meta.shirtplatform_assigned_color_id
       const spSizeId = meta.shirtplatform_assigned_size_id
+      const spMotiveId = meta.shirtplatform_motive_id
+      const spMotiveAttachment = meta.shirtplatform_motive_attachment
+      const spMotiveFilename = meta.shirtplatform_motive_filename
+      const spViewPosition = meta.shirtplatform_view_position ?? "FRONT"
 
       if (!spProductId || !spColorId || !spSizeId) {
         skippedItems.push(item.id)
@@ -136,15 +146,33 @@ export default async function shirtplatformOrderForwardingHandler({
         continue
       }
 
-      await shirtplatform.addOrderedProduct(
-        spOrderId,
-        Number(spProductId),
-        Number(spColorId),
-        Number(spSizeId),
-        item.quantity
-      )
+      if (spMotiveAttachment || spMotiveId) {
+        // CreatorSE — dynamic design with motive placement (inline attachment or motive ID)
+        await shirtplatform.addOrderedProductUsingCreatorSE(spOrderId, {
+          productId: Number(spProductId),
+          assignedColorId: Number(spColorId),
+          assignedSizeId: Number(spSizeId),
+          amount: item.quantity,
+          motiveId: spMotiveId ? Number(spMotiveId) : undefined,
+          motiveAttachment: spMotiveAttachment ? String(spMotiveAttachment) : undefined,
+          motiveFilename: spMotiveFilename ? String(spMotiveFilename) : undefined,
+          viewPosition: String(spViewPosition),
+        })
+        logger.info(
+          `[SP Order] Added CreatorSE item ${item.title} (${spMotiveAttachment ? 'inline' : 'motive ' + spMotiveId}, qty ${item.quantity}) to SP order ${spOrderId}`
+        )
+      } else {
+        // Base product — pre-designed, no custom motive
+        await shirtplatform.addOrderedProduct(
+          spOrderId,
+          Number(spProductId),
+          Number(spColorId),
+          Number(spSizeId),
+          item.quantity
+        )
+        logger.info(`[SP Order] Added item ${item.title} (qty ${item.quantity}) to SP order ${spOrderId}`)
+      }
       itemsAdded++
-      logger.info(`[SP Order] Added item ${item.title} (qty ${item.quantity}) to SP order ${spOrderId}`)
     }
 
     if (itemsAdded === 0) {

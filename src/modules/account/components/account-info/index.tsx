@@ -3,6 +3,7 @@ import { Badge, Button, clx } from "@medusajs/ui"
 import { useEffect } from "react"
 
 import useToggleState from "@lib/hooks/use-toggle-state"
+import { t } from "@lib/i18n"
 import { useFormStatus } from "react-dom"
 
 type AccountInfoProps = {
@@ -22,7 +23,7 @@ const AccountInfo = ({
   isSuccess,
   isError,
   clearState,
-  errorMessage = "An error occurred, please try again",
+  errorMessage = t("account.errorOccurred"),
   children,
   'data-testid': dataTestid
 }: AccountInfoProps) => {
@@ -63,7 +64,7 @@ const AccountInfo = ({
             data-testid="edit-button"
             data-active={state}
           >
-            {state ? "Cancel" : "Edit"}
+            {state ? t("form.cancel") : t("account.edit")}
           </Button>
         </div>
       </div>
@@ -82,7 +83,7 @@ const AccountInfo = ({
           data-testid="success-message"
         >
           <Badge className="p-2 my-4" color="green">
-            <span>{label} updated succesfully</span>
+            <span>{t("account.updatedSuccess", { label })}</span>
           </Badge>
         </Disclosure.Panel>
       </Disclosure>
@@ -126,7 +127,7 @@ const AccountInfo = ({
                 type="submit"
                 data-testid="save-button"
               >
-                Save changes
+                {t("account.saveChanges")}
               </Button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { t } from "@lib/i18n"
 import Image from "next/image"
 
 const MEDUSA_BACKEND_URL =
@@ -19,7 +20,7 @@ const Newsletter = () => {
 
     if (!name.trim() || !email.trim()) {
       setStatus("error")
-      setMessage("Please fill in both fields.")
+      setMessage(t("home.newsletter.fillBothFields"))
       return
     }
 
@@ -44,16 +45,16 @@ const Newsletter = () => {
 
       if (res.ok) {
         setStatus("success")
-        setMessage("Thanks for subscribing!")
+        setMessage(t("home.newsletter.success"))
         setName("")
         setEmail("")
       } else {
         setStatus("error")
-        setMessage(data.message || "Something went wrong. Please try again.")
+        setMessage(data.message || t("home.newsletter.error"))
       }
     } catch {
       setStatus("error")
-      setMessage("Something went wrong. Please try again.")
+      setMessage(t("home.newsletter.error"))
     }
   }
   return (
@@ -62,7 +63,7 @@ const Newsletter = () => {
       <div className="w-full overflow-hidden">
         <Image
           src="/images/newsletter-bg.png"
-          alt="Newsletter lifestyle image"
+          alt={t("home.newsletter.imageAlt")}
           width={800}
           height={1200}
           className="w-full h-full object-cover max-h-[66vh] md:min-h-[1100px]"
@@ -75,12 +76,11 @@ const Newsletter = () => {
         <div className="mx-auto">
 
 
-        <h2 className="text-3xl small:text-4xl font-normal text-black mb-4">
-          Let&apos;s elevate your everyday style.
+        <h2 className="text-3xl small:text-4xl font-heading font-bold text-black mb-4">
+          {t("home.newsletter.heading")}
         </h2>
         <p className="text-base text-gray-800 mb-8 max-w-md">
-          Join our newsletter to keep up to date with our product releases,
-          exclusive collections, and style guides.
+          {t("home.newsletter.body")}
         </p>
 
         <form className="w-full max-w-md" onSubmit={handleSubmit}>
@@ -90,7 +90,7 @@ const Newsletter = () => {
               htmlFor="newsletter-name"
               className="block text-sm font-bold text-gray-900 mb-2"
             >
-              Name
+              {t("home.newsletter.nameLabel")}
             </label>
             <input
               type="text"
@@ -108,7 +108,7 @@ const Newsletter = () => {
               htmlFor="newsletter-email"
               className="block text-sm font-bold text-gray-900 mb-2"
             >
-              Email Address
+              {t("home.newsletter.emailLabel")}
             </label>
             <input
               type="email"
@@ -135,9 +135,9 @@ const Newsletter = () => {
           <button
             type="submit"
             disabled={status === "loading"}
-            className="w-full sm:w-auto bg-black text-white px-10 py-3 text-sm font-medium border border-black hover:bg-white hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto bg-brand text-white px-10 py-3 text-sm font-medium border border-brand rounded-full hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {status === "loading" ? "Subscribing..." : "Subscribe"}
+            {status === "loading" ? t("home.newsletter.subscribing") : t("home.newsletter.subscribe")}
           </button>
         </form>
       </div>

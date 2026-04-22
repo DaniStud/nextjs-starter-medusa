@@ -6,6 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
 import React, { useState } from "react"
+import { t } from "@lib/i18n"
 import ErrorMessage from "../error-message"
 
 type PaymentButtonProps = {
@@ -40,7 +41,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
         <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
       )
     default:
-      return <Button disabled>Select a payment method</Button>
+      return <Button disabled>{t("checkout.selectPaymentMethod")}</Button>
   }
 }
 
@@ -87,7 +88,7 @@ const StripePaymentButton = ({
     // Validate the PaymentElement form first
     const { error: submitError } = await elements.submit()
     if (submitError) {
-      setErrorMessage(submitError.message || "Please check your payment details.")
+      setErrorMessage(submitError.message || t("checkout.checkPaymentDetails"))
       setSubmitting(false)
       return
     }
@@ -116,7 +117,7 @@ const StripePaymentButton = ({
         return
       }
 
-      setErrorMessage(error.message || "An unexpected error occurred.")
+      setErrorMessage(error.message || t("checkout.unexpectedError"))
       setSubmitting(false)
       return
     }
@@ -143,7 +144,7 @@ const StripePaymentButton = ({
         isLoading={submitting}
         data-testid={dataTestId}
       >
-        Place order
+        {t("checkout.placeOrder")}
       </Button>
       <ErrorMessage
         error={errorMessage}
@@ -182,7 +183,7 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
         size="large"
         data-testid="submit-order-button"
       >
-        Place order
+        {t("checkout.placeOrder")}
       </Button>
       <ErrorMessage
         error={errorMessage}

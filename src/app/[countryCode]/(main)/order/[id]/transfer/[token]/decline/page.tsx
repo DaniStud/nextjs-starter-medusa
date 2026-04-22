@@ -1,6 +1,7 @@
 import { declineTransferRequest } from "@lib/data/orders"
 import { Heading, Text } from "@medusajs/ui"
 import TransferImage from "@modules/order/components/transfer-image"
+import { t } from "@lib/i18n"
 
 export default async function TransferPage({
   params,
@@ -18,20 +19,20 @@ export default async function TransferPage({
         {success && (
           <>
             <Heading level="h1" className="text-xl text-zinc-900">
-              Order transfer declined!
+              {t("orderTransfer.declined")}
             </Heading>
             <Text className="text-zinc-600">
-              Transfer of order {id} has been successfully declined.
+              {t("orderTransfer.declinedBody", { id })}
             </Text>
           </>
         )}
         {!success && (
           <>
             <Text className="text-zinc-600">
-              There was an error declining the transfer. Please try again.
+              {t("orderTransfer.declineError")}
             </Text>
             {error && (
-              <Text className="text-red-500">Error message: {error}</Text>
+              <Text className="text-red-500">{t("orderTransfer.errorMessage", { error })}</Text>
             )}
           </>
         )}

@@ -1,4 +1,4 @@
-# 10shirts — Full-Stack E-Commerce Platform
+# 10SHRTS — Full-Stack E-Commerce Platform
 
 ## Comprehensive Technical Documentation
 
@@ -39,7 +39,7 @@
 
 ## 1. Project Overview
 
-**10shirts** is a full-stack e-commerce storefront built on the **Medusa v2** headless commerce engine with a **Next.js 15** frontend. The platform supports:
+**10SHRTS** is a full-stack e-commerce storefront built on the **Medusa v2** headless commerce engine with a **Next.js 15** frontend. The platform supports:
 
 - Product browsing with categories and collections
 - Shopping cart with persistent state
@@ -319,7 +319,7 @@ const sdk = new Medusa({
 
 | Component | Description |
 |---|---|
-| **Nav** | Sticky top navigation bar: hamburger/side menu, store name link, cart button with item count |
+| **Nav** | Sticky top navigation bar: hamburger/side menu, "10SHRTS" brand logo (Space Grotesk bold), cart button with item count |
 | **Footer** | Dark-themed footer (`bg-stone-900`) with copyright: "© 2026 10shirts. All rights reserved." |
 | **CartDropdown** | Headless UI Popover; auto-opens for 5 seconds on cart modification; shows items, subtotal, checkout link |
 | **CartButton** | Suspense-wrapped cart icon with live item count badge |
@@ -361,22 +361,26 @@ Address → Delivery → Payment → Review → Order Placed
 
 | Component | Description |
 |---|---|
-| **ProductActions** | Add-to-cart form with variant selection, stock checking, quantity input |
+| **ProductActions** | Add-to-cart form with variant selection, stock checking, quantity input. Auto-selects "Small"/"S" variant on multi-variant products |
 | **MobileActions** | Sticky bottom bar on mobile (appears when main actions scroll out of view via `useIntersection`) |
 | **OptionSelect** | Variant option selector (size, color) |
 | **ProductPreview** | Product card for catalog listings |
 | **ProductPrice** | Price display with original/sale/percentage-off |
-| **ImageGallery** | Product image gallery |
-| **ProductTabs** | Accordion with Description, Shipping & Returns tabs |
+| **ImageGallery** | Interactive image slider with prev/next arrow buttons and a clickable thumbnail strip below the main image |
+| **ProductTabs** | Accordion with Description, Shipping & Returns tabs (component exists but is not currently rendered on the product page) |
 | **RelatedProducts** | "More products" section |
-| **Thumbnail** | Responsive product thumbnail component |
+| **Thumbnail** | Responsive product thumbnail with hover-swap — cross-fades to the second product image on mouse hover |
 
 **Product Detail Page Layout:**
+
+Mobile: single column (image on top, info + actions below). Desktop: 2-column CSS grid (`1fr 1fr`).
+
 ```
-┌──────────────┬──────────────┬──────────────┐
-│ Product Info │ Image        │ Actions      │
-│ + Tabs       │ Gallery      │ (Add to Cart)│
-└──────────────┴──────────────┴──────────────┘
+┌──────────────┬──────────────┐
+│ Image        │ Product Info │
+│ Slider       │ + Actions    │
+│              │ (Add to Cart)│
+└──────────────┴──────────────┘
 ```
 
 #### Cart (`src/modules/cart/`)
@@ -419,8 +423,10 @@ Address → Delivery → Payment → Review → Order Placed
 
 | Component | Description |
 |---|---|
-| **Hero** | Homepage hero banner |
-| **FeaturedProducts** | Featured products grid |
+| **Hero** | Homepage hero banner with CSS parallax effect on the image. Displays "10SHRTS" heading (Space Grotesk font) and brand-red CTA button |
+| **FeaturedProducts** | Featured products grid organized by collection |
+| **NewInGrid** | "New in" section showing 4 most recently created products with a brand-red "Shop Now" CTA |
+| **Newsletter** | Newsletter signup form with name + email fields, submits to Medusa backend `/store/newsletter/subscribe` endpoint |
 
 #### Common UI (`src/modules/common/`)
 
@@ -440,6 +446,7 @@ Address → Delivery → Payment → Review → Order Placed
 | **DeleteButton** | Delete action with confirmation |
 | **Divider** | Horizontal divider |
 | **FilterRadioGroup** | Radio group for filter selection |
+| **ScrollReveal** | Intersection Observer wrapper — fades and slides children in when they enter the viewport. Used on home page sections |
 | **Icons** | SVG icon components (Bancontact, iDeal, PayPal, Spinner, etc.) |
 
 ### 5.5 Hooks & Context
@@ -513,7 +520,9 @@ type IconProps = {
 
 - **Preset:** Extends `@medusajs/ui-preset`
 - **Dark Mode:** `class`-based
-- **Font Family:** Inter (system font fallback stack)
+- **Font Families:**
+  - `font-heading` — Space Grotesk (via `next/font/google`, CSS variable `--font-heading`)
+  - `font-sans` — Inter (via `next/font/google`, CSS variable `--font-body`)
 - **Custom Breakpoints:**
 
 | Name | Width |
@@ -525,18 +534,38 @@ type IconProps = {
 | `large` | 1440px |
 | `xlarge` | 1680px |
 
-- **Custom Colors:** Grey scale (`grey-0` through `grey-90`)
+- **Custom Colors:**
+  - `brand` / `brand-dark` — `#ed1d27` / `#c4161f` (10SHRTS brand red)
+  - Grey scale (`grey-0` through `grey-90`)
 - **Border Radii:** `soft: 2px`, `base: 4px`, `rounded: 8px`, `circle: 9999px`
 - **Animations:** `ring`, `fade-in-right`, `fade-in-top`, `fade-out-top`
+
+#### Brand Overrides (`src/styles/globals.css`)
+
+Medusa UI design system CSS variables are overridden at `:root` level to apply 10SHRTS branding:
+
+| CSS Variable | Value | Effect |
+|---|---|---|
+| `--button-inverted` | `#ed1d27` | All `variant="primary"` Medusa UI buttons turn brand red |
+| `--button-inverted-hover` | `#c4161f` | Hover state for primary buttons |
+| `--button-inverted-pressed` | `#a01219` | Pressed state for primary buttons |
+| `--bg-interactive` | `#ed1d27` | Interactive backgrounds |
+| `--border-interactive` | `#ed1d27` | Interactive borders |
+
+All Medusa UI buttons are globally forced to pill shape (`border-radius: 9999px`).
 
 #### Global CSS (`src/styles/globals.css`)
 
 Custom utility classes:
-- `.content-container` — `max-width: 1440px`, centered with auto margins
-- `.contrast-btn` — Pill-shaped button style
+- `.content-container` — `max-width: min(66vw, 1400px)`, centered with auto margins
+- `.contrast-btn` — Pill-shaped button style with brand color
 - `.no-scrollbar` — Cross-browser scrollbar hiding
 - Floating label input animation (translate on focus/filled state)
 - Typography scale: `.text-xsmall-regular`, `.text-small-regular`, `.text-small-semi`, `.text-base-regular`, `.text-base-semi`
+
+#### Favicon
+
+Configured in `src/app/layout.tsx` metadata: `/images/10shirt-logo.png`
 
 #### Path Aliases (`tsconfig.json`)
 
@@ -660,11 +689,12 @@ This is the primary integration point for Stripe event processing.
 
 Automatically captures Stripe payments after an order is placed:
 
-1. Lists all payments in the system
-2. Filters to Stripe payments (`provider_id === 'pp_stripe_stripe'`) created within the last 60 seconds that are not yet captured
-3. Calls `paymentModule.capturePayment({ payment_id })` for each matching payment
+1. Resolves the order module and retrieves the order with its `payment_collection` relation
+2. Uses the payment collection ID to list only the payments belonging to this specific order
+3. Filters to uncaptured Stripe payments (`provider_id === 'pp_stripe_stripe'`)
+4. Calls `paymentModule.capturePayment({ payment_id })` for each matching payment
 
-> **Note:** This subscriber uses a broad time-window filter rather than being scoped to the specific order's payments. This is a design choice that works well for low-traffic stores but could have edge cases in high-concurrency scenarios.
+This approach is scoped to the specific order's payments, avoiding edge cases in high-concurrency scenarios.
 
 ### 6.5 Seed Script
 
@@ -982,8 +1012,7 @@ The project includes comprehensive Stripe testing documentation:
 ### Known Considerations
 - `JWT_SECRET` and `COOKIE_SECRET` default to `"supersecret"` in development — must be overridden in production
 - TypeScript and ESLint build errors are ignored (`ignoreBuildErrors: true`) in `next.config.js`
-- The `auto-capture-payment` subscriber uses a broad time-window filter (60 seconds) rather than targeting the specific order's payments
 
 ---
 
-*Generated from repository analysis — nextjs-starter-medusa (10shirts)*
+*Generated from repository analysis — nextjs-starter-medusa (10SHRTS)*

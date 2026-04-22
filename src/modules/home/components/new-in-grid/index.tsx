@@ -2,6 +2,7 @@ import Image from "next/image"
 import { HttpTypes } from "@medusajs/types"
 import { listProducts } from "@lib/data/products"
 import { getProductPrice } from "@lib/util/get-product-price"
+import { t } from "@lib/i18n"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export default async function NewInGrid({
@@ -29,13 +30,12 @@ export default async function NewInGrid({
     <section className="ml-auto w-full px-4 py-10 small:px-8 max-w-[90vw] md:max-w-[66vw] md:min-w-[66vw] mx-auto">
       {/* Section Header */}
       <div className="flex flex-col items-start justify-between gap-4 mb-8 sm:flex-row sm:items-center">
-        <h2 className="text-xl font-normal text-gray-900 small:text-2xl">
-          New in: handpicked daily from the world&apos;s best brands and
-          boutiques
+        <h2 className="text-xl font-heading font-bold text-gray-900 small:text-2xl">
+          {t("home.newIn.heading")}
         </h2>
         <LocalizedClientLink href="/store">
-          <button className="px-6 py-2 text-sm font-medium text-black transition-colors bg-white border border-black whitespace-nowrap hover:bg-gray-50">
-            Shop Now
+          <button className="px-6 py-2 text-sm font-medium text-white transition-colors bg-brand border border-brand rounded-full whitespace-nowrap hover:bg-brand-dark">
+            {t("home.newIn.cta")}
           </button>
         </LocalizedClientLink>
       </div>
@@ -58,7 +58,7 @@ export default async function NewInGrid({
                   <div className="relative w-full h-full">
                     <Image
                       src={image}
-                      alt={product.title ?? "Product image"}
+                      alt={product.title ?? t("home.newIn.productImageAlt")}
                       fill
                       className="object-contain object-center transition-transform duration-300 group-hover:scale-105"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
@@ -66,7 +66,7 @@ export default async function NewInGrid({
                   </div>
                 ) : (
                   <div className="flex items-center justify-center w-full h-full text-gray-300">
-                    <span className="text-sm">No image</span>
+                    <span className="text-sm">{t("home.newIn.noImage")}</span>
                   </div>
                 )}
               </div>

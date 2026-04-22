@@ -1,4 +1,5 @@
 import { Heading, Text } from "@medusajs/ui"
+import { t } from "@lib/i18n"
 
 import InteractiveLink from "@modules/common/components/interactive-link"
 
@@ -9,14 +10,13 @@ const EmptyCartMessage = () => {
         level="h1"
         className="flex flex-row text-3xl-regular gap-x-2 items-baseline"
       >
-        Cart
+        {t("emptyCart.heading")}
       </Heading>
       <Text className="text-base-regular mt-4 mb-6 max-w-[32rem]">
-        You don&apos;t have anything in your cart. Let&apos;s change that, use
-        the link below to start browsing our products.
+        {t("emptyCart.body")}
       </Text>
       <div>
-        <InteractiveLink href="/store">Explore products</InteractiveLink>
+        <InteractiveLink href="/store">{t("emptyCart.explore")}</InteractiveLink>
       </div>
     </div>
   )

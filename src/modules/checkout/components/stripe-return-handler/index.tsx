@@ -2,6 +2,7 @@
 
 import { placeOrder } from "@lib/data/cart"
 import { Heading, Text } from "@medusajs/ui"
+import { t } from "@lib/i18n"
 import { useStripe } from "@stripe/react-stripe-js"
 import { useEffect, useRef, useState } from "react"
 
@@ -24,7 +25,7 @@ const StripeReturnHandler = ({
     stripe.retrievePaymentIntent(clientSecret).then(async ({ paymentIntent }) => {
       if (!paymentIntent) {
         setStatus("error")
-        setErrorMessage("Could not retrieve payment status.")
+        setErrorMessage(t("stripe.noStatus"))
         return
       }
 
@@ -36,7 +37,7 @@ const StripeReturnHandler = ({
             setStatus("success")
           } catch (err: any) {
             setStatus("error")
-            setErrorMessage(err.message || "Failed to place order.")
+            setErrorMessage(err.message || t("stripe.failedOrder"))
           }
           break
         case "processing":
@@ -45,7 +46,7 @@ const StripeReturnHandler = ({
         default:
           setStatus("error")
           setErrorMessage(
-            `Payment was not successful. Status: ${paymentIntent.status}`
+            t("stripe.notSuccessful", { status: paymentIntent.status })
           )
       }
     })
@@ -56,10 +57,10 @@ const StripeReturnHandler = ({
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ui-fg-base" />
         <Heading level="h2" className="text-2xl">
-          Processing your payment...
+          {t("stripe.processing")}
         </Heading>
         <Text className="text-ui-fg-subtle">
-          Please wait while we confirm your payment.
+          {t("stripe.pleaseWait")}
         </Text>
       </div>
     )
@@ -69,16 +70,16 @@ const StripeReturnHandler = ({
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <Heading level="h2" className="text-2xl text-ui-fg-error">
-          Payment failed
+          {t("stripe.failed")}
         </Heading>
         <Text className="text-ui-fg-subtle">
-          {errorMessage || "Something went wrong with your payment."}
+          {errorMessage || t("stripe.somethingWrong")}
         </Text>
         <a
           href="."
           className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover underline"
         >
-          Return to checkout
+          {t("stripe.returnToCheckout")}
         </a>
       </div>
     )
@@ -88,9 +89,9 @@ const StripeReturnHandler = ({
   return (
     <div className="flex flex-col items-center justify-center py-24 gap-4">
       <Heading level="h2" className="text-2xl">
-        Payment confirmed!
+        {t("stripe.confirmed")}
       </Heading>
-      <Text className="text-ui-fg-subtle">Redirecting to your order...</Text>
+      <Text className="text-ui-fg-subtle">{t("stripe.redirecting")}</Text>
     </div>
   )
 }

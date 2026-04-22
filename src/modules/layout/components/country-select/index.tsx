@@ -7,6 +7,7 @@ import {
   ListboxOptions,
   Transition,
 } from "@headlessui/react"
+import { t } from "@lib/i18n"
 import { Fragment, useEffect, useMemo, useState } from "react"
 import ReactCountryFlag from "react-country-flag"
 
@@ -63,6 +64,9 @@ const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
     close()
   }
 
+  // TODO implement multi national delivery
+  return null
+  /*
   return (
     <div>
       <Listbox
@@ -76,10 +80,10 @@ const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
       >
         <ListboxButton className="py-1 w-full">
           <div className="txt-compact-small flex items-start gap-x-2">
-            <span>Shipping to:</span>
+            <span>{t("countrySelect.shippingTo")}</span>
             {current && (
               <span className="txt-compact-small flex items-center gap-x-2">
-                {/* @ts-ignore */}
+                // @ts-ignore
                 <ReactCountryFlag
                   svg
                   style={{
@@ -112,7 +116,7 @@ const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
                     value={o}
                     className="py-2 hover:bg-gray-200 px-3 cursor-pointer flex items-center gap-x-2"
                   >
-                    {/* @ts-ignore */}
+                    // @ts-ignore
                     <ReactCountryFlag
                       svg
                       style={{
@@ -131,6 +135,7 @@ const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
       </Listbox>
     </div>
   )
+  */
 }
 
 export default CountrySelect

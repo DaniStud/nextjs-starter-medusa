@@ -136,7 +136,7 @@ export interface ShirtplatformFulfillmentItem {
 // ---------------------------------------------------------------------------
 
 class ShirtplatformModuleService {
-  private readonly apiUrl: string
+  readonly apiUrl: string
   private readonly username: string
   private readonly password: string
   readonly accountId: string
@@ -326,7 +326,8 @@ class ShirtplatformModuleService {
   async getCountries(): Promise<ShirtplatformCountry[]> {
     const data = await this.request<any>(`/accounts/${this.accountId}/countries`)
     if (Array.isArray(data)) return data
-    return data?.list ?? data?.data ?? data?.countries ?? []
+    const items = data?.pagedData?.country ?? data?.list ?? data?.data ?? data?.countries ?? []
+    return Array.isArray(items) ? items : [items]
   }
 
   // -------------------------------------------------------------------------
@@ -334,13 +335,16 @@ class ShirtplatformModuleService {
   // -------------------------------------------------------------------------
 
   async createOrder(payload: ShirtplatformOrderPayload): Promise<ShirtplatformOrderResponse> {
-    return this.request<ShirtplatformOrderResponse>(
+    const data = await this.request<any>(
       `/accounts/${this.accountId}/shops/${this.shopId}/orders`,
       {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ productionOrder: payload }),
       }
     )
+    // Response wraps in productionOrderExpanded or productionOrder
+    const order = data?.productionOrderExpanded ?? data?.productionOrder ?? data
+    return { id: order.id, uniqueId: order.uniqueId }
   }
 
   /**
@@ -363,6 +367,83 @@ class ShirtplatformModuleService {
           assignedProductSize: { id: assignedSizeId },
           amount,
         }),
+      }
+    )
+  }
+
+  /**
+   * Add a product to an order using CreatorSE (dynamic design placement).
+   * Supports either a motive ID reference or inline base64 attachment.
+   */
+  async addOrderedProductUsingCreatorSE(
+    orderId: number,
+    options: {
+      productId: number
+      assignedColorId: number
+      assignedSizeId: number
+      amount: number
+      motiveId?: number
+      motiveAttachment?: string // base64-encoded image
+      motiveFilename?: string
+      viewPosition?: string // e.g. "FRONT", "BACK" — defaults to "FRONT"
+    }
+  ): Promise<any> {
+    const {
+      productId,
+      assignedColorId,
+      assignedSizeId,
+      amount,
+      motiveId,
+      motiveAttachment,
+      motiveFilename,
+      viewPosition = "FRONT",
+    } = options
+
+    // Build the motive reference: either by ID or inline attachment
+    const motive: Record<string, any> = {}
+    if (motiveAttachment) {
+      motive.attachment = motiveAttachment
+      if (motiveFilename) motive.filename = motiveFilename
+    } else if (motiveId) {
+      motive.id = motiveId
+    }
+
+    const payload = {
+      creatorse_design: {
+        productId,
+        amount,
+        assignedColor: { id: assignedColorId },
+        assignedSize: { id: assignedSizeId },
+        compositions: {
+          creatorse_composition: [
+            {
+              productArea: {
+                assignedView: {
+                  view: { position: viewPosition },
+                },
+              },
+              elements: [
+                {
+                  creatorse_designElementMotive: {
+                    motive,
+                    position: {
+                      horizontalCenter: "0",
+                      verticalCenter: "0",
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    }
+
+    return this.request(
+      `/accounts/${this.accountId}/shops/${this.shopId}/orders/${orderId}/orderedProducts/usingCreatorSE`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
       }
     )
   }

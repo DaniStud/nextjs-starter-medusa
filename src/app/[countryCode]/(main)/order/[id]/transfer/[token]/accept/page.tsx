@@ -1,6 +1,7 @@
 import { acceptTransferRequest } from "@lib/data/orders"
 import { Heading, Text } from "@medusajs/ui"
 import TransferImage from "@modules/order/components/transfer-image"
+import { t } from "@lib/i18n"
 
 export default async function TransferPage({
   params,
@@ -18,20 +19,20 @@ export default async function TransferPage({
         {success && (
           <>
             <Heading level="h1" className="text-xl text-zinc-900">
-              Order transfered!
+              {t("orderTransfer.accepted")}
             </Heading>
             <Text className="text-zinc-600">
-              Order {id} has been successfully transfered to the new owner.
+              {t("orderTransfer.acceptedBody", { id })}
             </Text>
           </>
         )}
         {!success && (
           <>
             <Text className="text-zinc-600">
-              There was an error accepting the transfer. Please try again.
+              {t("orderTransfer.acceptError")}
             </Text>
             {error && (
-              <Text className="text-red-500">Error message: {error}</Text>
+              <Text className="text-red-500">{t("orderTransfer.errorMessage", { error })}</Text>
             )}
           </>
         )}
