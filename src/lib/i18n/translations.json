@@ -3,8 +3,6 @@
     "nav.brand": "10SHRTS",
     "nav.cart": "Cart ({{count}})",
     "nav.menu": "Menu",
-    "nav.store": "STORE",
-    "nav.about": "ABOUT",
 
     "sideMenu.home": "Home",
     "sideMenu.store": "Store",
@@ -36,6 +34,8 @@
     "cartDrawer.close": "Close cart",
     "cartDrawer.empty": "Your cart is empty",
     "cartDrawer.continueShopping": "Continue shopping",
+    "cartDrawer.decreaseQuantity": "Decrease quantity",
+    "cartDrawer.increaseQuantity": "Increase quantity",
 
     "cartMismatch.message": "Something went wrong when we tried to transfer your cart",
     "cartMismatch.retry": "Run transfer again",
@@ -67,9 +67,6 @@
 
     "productRail.viewAll": "View all",
 
-    "home.featured.heading": "FEATURED PRODUCTS",
-    "home.featured.seeAll": "SEE ALL PRODUCTS",
-
     "productTabs.productInfo": "Product Information",
     "productTabs.shippingReturns": "Shipping & Returns",
     "productTabs.material": "Material",
@@ -98,10 +95,7 @@
     "productActions.selectVariant": "Select variant",
     "productActions.outOfStock": "Out of stock",
     "productActions.addToCart": "Add to cart",
-    "productActions.adding": "Adding...",
     "productActions.selectOptions": "Select Options",
-    "productActions.decreaseQuantity": "Decrease quantity",
-    "productActions.increaseQuantity": "Increase quantity",
 
     "optionSelect.select": "Select {{title}}",
 
@@ -306,9 +300,6 @@
     "quickAdd.adding": "Adding...",
     "quickAdd.outOfStock": "Out of stock",
 
-    "about.heading": "About 10SHRTS",
-    "about.body": "Premium quality essentials \u2014 curated for everyday style. More information coming soon.",
-
     "shipping.unlocked": "Free Shipping unlocked!",
     "shipping.unlock": "Unlock Free Shipping",
     "shipping.onlyAway": "Only {{amount}} away",
@@ -397,8 +388,6 @@
     "nav.brand": "10SHRTS",
     "nav.cart": "Kurv ({{count}})",
     "nav.menu": "Menu",
-    "nav.store": "BUTIK",
-    "nav.about": "OM OS",
 
     "sideMenu.home": "Hjem",
     "sideMenu.store": "Butik",
@@ -430,6 +419,8 @@
     "cartDrawer.close": "Luk kurv",
     "cartDrawer.empty": "Din kurv er tom",
     "cartDrawer.continueShopping": "Fortsæt med at handle",
+    "cartDrawer.decreaseQuantity": "Reducer antal",
+    "cartDrawer.increaseQuantity": "Forøg antal",
 
     "cartMismatch.message": "Noget gik galt, da vi forsøgte at overføre din kurv",
     "cartMismatch.retry": "Kør overførsel igen",
@@ -461,9 +452,6 @@
 
     "productRail.viewAll": "Se alle",
 
-    "home.featured.heading": "UDVALGTE PRODUKTER",
-    "home.featured.seeAll": "SE ALLE PRODUKTER",
-
     "productTabs.productInfo": "Produktinformation",
     "productTabs.shippingReturns": "Levering & Returnering",
     "productTabs.material": "Materiale",
@@ -492,10 +480,7 @@
     "productActions.selectVariant": "Vælg variant",
     "productActions.outOfStock": "Udsolgt",
     "productActions.addToCart": "Læg i kurv",
-    "productActions.adding": "Tilføjer...",
     "productActions.selectOptions": "Vælg muligheder",
-    "productActions.decreaseQuantity": "Mindsk antal",
-    "productActions.increaseQuantity": "Forøg antal",
 
     "optionSelect.select": "Vælg {{title}}",
 
@@ -699,9 +684,6 @@
     "quickAdd.selectSize": "Vælg størrelse",
     "quickAdd.adding": "Tilføjer...",
     "quickAdd.outOfStock": "Udsolgt",
-
-    "about.heading": "Om 10SHRTS",
-    "about.body": "Premium kvalitetsessentials \u2014 udvalgt til hverdagens stil. Mere information kommer snart.",
 
     "shipping.unlocked": "Gratis fragt aktiveret!",
     "shipping.unlock": "Aktiver gratis fragt",

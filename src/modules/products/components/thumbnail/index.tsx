@@ -53,7 +53,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
             src={initialImage}
             alt="Thumbnail"
             className={clx(
-              "absolute inset-0 object-cover object-center transition-opacity duration-500 ease-in-out",
+              "absolute inset-0 object-contain object-center transition-opacity duration-500 ease-in-out",
               isHovered && hoverImage ? "opacity-0" : "opacity-100"
             )}
             draggable={false}
@@ -66,7 +66,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
               src={hoverImage}
               alt="Thumbnail hover"
               className={clx(
-                "absolute inset-0 object-cover object-center transition-opacity duration-500 ease-in-out",
+                "absolute inset-0 object-contain object-center transition-opacity duration-500 ease-in-out",
                 isHovered ? "opacity-100" : "opacity-0"
               )}
               draggable={false}

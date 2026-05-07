@@ -9,6 +9,8 @@ type CartDrawerContextType = {
   closeDrawer: () => void
   cart: HttpTypes.StoreCart | null
   setCart: (cart: HttpTypes.StoreCart | null) => void
+  optimisticDelta: number
+  addOptimisticDelta: (delta: number) => void
 }
 
 const CartDrawerContext = createContext<CartDrawerContextType | null>(null)
@@ -21,16 +23,34 @@ export function CartDrawerProvider({
   initialCart?: HttpTypes.StoreCart | null
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [cart, setCart] = useState<HttpTypes.StoreCart | null>(
+  const [cart, setCartState] = useState<HttpTypes.StoreCart | null>(
     initialCart ?? null
   )
+  const [optimisticDelta, setOptimisticDelta] = useState(0)
 
   const openDrawer = useCallback(() => setIsOpen(true), [])
   const closeDrawer = useCallback(() => setIsOpen(false), [])
 
+  const setCart = useCallback((newCart: HttpTypes.StoreCart | null) => {
+    setCartState(newCart)
+    setOptimisticDelta(0) // reset delta when real cart arrives
+  }, [])
+
+  const addOptimisticDelta = useCallback((delta: number) => {
+    setOptimisticDelta((prev) => prev + delta)
+  }, [])
+
   return (
     <CartDrawerContext.Provider
-      value={{ isOpen, openDrawer, closeDrawer, cart, setCart }}
+      value={{
+        isOpen,
+        openDrawer,
+        closeDrawer,
+        cart,
+        setCart,
+        optimisticDelta,
+        addOptimisticDelta,
+      }}
     >
       {children}
     </CartDrawerContext.Provider>

@@ -51,17 +51,19 @@ export async function retrieveCart(cartId?: string, fields?: string) {
 }
 
 export async function getOrSetCart(countryCode: string) {
-  const region = await getRegion(countryCode)
+  const [region, existingCart, authHeaders] = await Promise.all([
+    getRegion(countryCode),
+    retrieveCart(undefined, 'id,region_id'),
+    getAuthHeaders(),
+  ])
 
   if (!region) {
     throw new Error(`Region not found for country code: ${countryCode}`)
   }
 
-  let cart = await retrieveCart(undefined, 'id,region_id')
+  let cart = existingCart
 
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
+  const headers = { ...authHeaders }
 
   if (!cart) {
     const cartResp = await sdk.store.cart.create(
@@ -145,10 +147,11 @@ export async function addToCart({
       headers
     )
     .then(async () => {
-      const cartCacheTag = await getCacheTag("carts")
+      const [cartCacheTag, fulfillmentCacheTag] = await Promise.all([
+        getCacheTag("carts"),
+        getCacheTag("fulfillment"),
+      ])
       revalidateTag(cartCacheTag)
-
-      const fulfillmentCacheTag = await getCacheTag("fulfillment")
       revalidateTag(fulfillmentCacheTag)
     })
     .catch(medusaError)

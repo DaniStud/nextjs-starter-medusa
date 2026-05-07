@@ -18,7 +18,7 @@ export default function QuickAddButton({
   const [isAdding, setIsAdding] = useState(false)
   const [showSizes, setShowSizes] = useState(false)
   const popoverRef = useRef<HTMLDivElement>(null)
-  const { openDrawer } = useCartDrawer()
+  const { openDrawer, addOptimisticDelta } = useCartDrawer()
 
   const variants = product.variants ?? []
   const isSingleVariant = variants.length <= 1
@@ -41,6 +41,7 @@ export default function QuickAddButton({
   const handleAdd = async (variantId: string) => {
     setIsAdding(true)
     setShowSizes(false)
+    addOptimisticDelta(1)
     openDrawer()
     try {
       await addToCart({ variantId, quantity: 1, countryCode })

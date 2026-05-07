@@ -10,7 +10,7 @@ const CartDropdown = ({
 }: {
   cart?: HttpTypes.StoreCart | null
 }) => {
-  const { openDrawer, setCart } = useCartDrawer()
+  const { openDrawer, setCart, optimisticDelta } = useCartDrawer()
 
   // Sync server-fetched cart into the drawer context
   useEffect(() => {
@@ -19,8 +19,9 @@ const CartDropdown = ({
     }
   }, [cartState, setCart])
 
-  const totalItems =
+  const serverItems =
     cartState?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0
+  const totalItems = serverItems + optimisticDelta
 
   return (
     <div className="h-full z-50">
