@@ -9,15 +9,12 @@ import { HttpTypes } from "@medusajs/types"
 export default function CollectionTemplate({
   sortBy,
   collection,
-  page,
   countryCode,
 }: {
   sortBy?: SortOptions
   collection: HttpTypes.StoreCollection
-  page?: string
   countryCode: string
 }) {
-  const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
 
   return (
@@ -36,7 +33,6 @@ export default function CollectionTemplate({
         >
           <PaginatedProducts
             sortBy={sort}
-            page={pageNumber}
             collectionId={collection.id}
             countryCode={countryCode}
           />

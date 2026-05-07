@@ -8,14 +8,11 @@ import PaginatedProducts from "./paginated-products"
 
 const StoreTemplate = ({
   sortBy,
-  page,
   countryCode,
 }: {
   sortBy?: SortOptions
-  page?: string
   countryCode: string
 }) => {
-  const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
 
   return (
@@ -34,7 +31,6 @@ const StoreTemplate = ({
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts
             sortBy={sort}
-            page={pageNumber}
             countryCode={countryCode}
           />
         </Suspense>
