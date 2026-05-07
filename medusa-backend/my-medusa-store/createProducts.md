@@ -62,7 +62,22 @@ This returns all products with their expanded details: assigned colors, sizes, v
 - Dimensions: The design will be centered on the print area by default
 - File size: No strict limit, but keep it reasonable (< 5 MB)
 
-The design file lives in your project, e.g. `public/images/my-design.png`.
+> **Important — DPI is ignored**: Shirtplatform ignores embedded DPI metadata and renders bitmaps at ~141 DPI by default. A 1462×530px image at 300 DPI (intended 124mm × 45mm) will render at **264mm × 96mm** unless you constrain the size via `left`/`right` margins in the position object. See the Position & Sizing section below.
+
+The design file lives in your project, e.g. `static/my-design.png`.
+
+### Print Area Dimensions (Crafter T — product 46881, FRONT)
+
+| Size | Width (mm) | Height (mm) |
+|------|-----------|-------------|
+| S    | 289       | 550         |
+| M    | 310       | 590         |
+| L    | 315       | 600         |
+| XL   | 320       | 610         |
+| XXL  | 320       | 610         |
+| 3XL  | 330       | 630         |
+
+These are from the `realSizes` endpoint. The print area varies by size — larger shirts have wider/taller print areas.
 
 ---
 
@@ -112,6 +127,9 @@ base64 -w 0 public/images/my-design.png | pbcopy
 | `shirtplatform_motive_attachment` | string | Base64 of design PNG | `iVBORw0KGgo...` |
 | `shirtplatform_motive_filename` | string | Original filename | `10shirt-logo.png` |
 | `shirtplatform_view_position` | string | Print side (default: FRONT) | `FRONT` |
+| `shirtplatform_position_left` | string | Left margin in mm (controls width) | `96` |
+| `shirtplatform_position_right` | string | Right margin in mm (controls width) | `96` |
+| `shirtplatform_position_top` | string | Top margin in mm (vertical placement) | `40` |
 
 > **Important**: `shirtplatform_assigned_size_id` is the **only field that changes** between variants of the same color. All other metadata fields are identical.
 
@@ -124,7 +142,10 @@ base64 -w 0 public/images/my-design.png | pbcopy
   "shirtplatform_assigned_size_id": 171089,
   "shirtplatform_motive_attachment": "iVBORw0KGgoAAAANSUhEUg...",
   "shirtplatform_motive_filename": "10shirt-logo.png",
-  "shirtplatform_view_position": "FRONT"
+  "shirtplatform_view_position": "FRONT",
+  "shirtplatform_position_left": "96",
+  "shirtplatform_position_right": "96",
+  "shirtplatform_position_top": "40"
 }
 ```
 
@@ -135,7 +156,7 @@ For Size L, only `shirtplatform_assigned_size_id` changes to `171090`.
 ## Step 5 — What Happens When an Order Is Placed
 
 The `order-placed-shirtplatform` subscriber handles everything automatically:
-
+    
 ```
 Customer places order
   → order.placed event fires
@@ -190,8 +211,9 @@ The JSON format differs from the XML format in the API docs. When sending JSON:
               "filename": "design.png"
             },
             "position": {
-              "horizontalCenter": "0",
-              "verticalCenter": "0"
+              "left": "96",
+              "right": "96",
+              "top": "40"
             }
           }
         }]
@@ -211,18 +233,28 @@ The JSON format differs from the XML format in the API docs. When sending JSON:
 | Motive ID reference (`motive.id`) | Partial | Shop motives: bitmap upload endpoint broken (500). User motives: don't render. |
 | URL reference (`motive.url`) | Untested | Requires publicly accessible URL. |
 
-### Position Options
+### Position & Sizing
+
+The `position` object controls **both placement AND size** of the design element.
+The API does NOT have separate width/height properties — size is determined by the margins.
 
 ```json
-// Center on print area (default)
+// Center on print area, natural size (DPI-dependent, often too large!)
 { "horizontalCenter": "0", "verticalCenter": "0" }
 
-// Fixed margins (mm)
-{ "left": "10", "right": "10", "top": "10", "bottom": "10" }
+// Constrain width via left/right margins (RECOMMENDED for controlling size)
+// Width = print_area_width - left - right
+// Example: L shirt (315mm area), design should be 123mm wide:
+//   margins = (315 - 123) / 2 = 96mm each side
+{ "left": "96", "right": "96", "top": "40" }
 
 // Percentage margins
-{ "left": "10%", "right": "10%", "top": "10%", "bottom": "10%" }
+{ "left": "10%", "right": "10%", "top": "5%" }
 ```
+
+> **Note**: Margins are relative to the print area, not the shirt. The print area top edge is roughly 5-6cm below the neckline on a Crafter T. So `top: "40"` (40mm from print area top) places the design about 9.5cm below the neck.
+
+> **Size varies by shirt size**: When using fixed mm margins, the design will render at the same absolute width regardless of shirt size (since each size has a different print area width). This is usually desirable — the print stays the same physical size across S-3XL.
 
 ### Shirtplatform Constants
 
