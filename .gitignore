@@ -58,3 +58,5 @@ dump.rdb
 
 # medusa postgres data
 medusa-backend/postgres-data
+
+.env.dev-setup
