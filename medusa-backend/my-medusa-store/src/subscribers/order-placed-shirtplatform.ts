@@ -135,8 +135,12 @@ export default async function shirtplatformOrderForwardingHandler({
       const spSizeId = meta.shirtplatform_assigned_size_id
       const spMotiveId = meta.shirtplatform_motive_id
       const spMotiveAttachment = meta.shirtplatform_motive_attachment
+      const spMotiveUrl = meta.shirtplatform_motive_url
       const spMotiveFilename = meta.shirtplatform_motive_filename
       const spViewPosition = meta.shirtplatform_view_position ?? "FRONT"
+      const spPositionLeft = meta.shirtplatform_position_left
+      const spPositionRight = meta.shirtplatform_position_right
+      const spPositionTop = meta.shirtplatform_position_top
 
       if (!spProductId || !spColorId || !spSizeId) {
         skippedItems.push(item.id)
@@ -146,8 +150,8 @@ export default async function shirtplatformOrderForwardingHandler({
         continue
       }
 
-      if (spMotiveAttachment || spMotiveId) {
-        // CreatorSE — dynamic design with motive placement (inline attachment or motive ID)
+      if (spMotiveAttachment || spMotiveUrl || spMotiveId) {
+        // CreatorSE — dynamic design with motive placement (inline attachment, URL, or motive ID)
         await shirtplatform.addOrderedProductUsingCreatorSE(spOrderId, {
           productId: Number(spProductId),
           assignedColorId: Number(spColorId),
@@ -155,11 +159,16 @@ export default async function shirtplatformOrderForwardingHandler({
           amount: item.quantity,
           motiveId: spMotiveId ? Number(spMotiveId) : undefined,
           motiveAttachment: spMotiveAttachment ? String(spMotiveAttachment) : undefined,
+          motiveUrl: spMotiveUrl ? String(spMotiveUrl) : undefined,
           motiveFilename: spMotiveFilename ? String(spMotiveFilename) : undefined,
           viewPosition: String(spViewPosition),
+          positionLeft: spPositionLeft ? String(spPositionLeft) : undefined,
+          positionRight: spPositionRight ? String(spPositionRight) : undefined,
+          positionTop: spPositionTop ? String(spPositionTop) : undefined,
         })
+        const motiveType = spMotiveAttachment ? 'inline' : spMotiveUrl ? 'url' : 'motive ' + spMotiveId
         logger.info(
-          `[SP Order] Added CreatorSE item ${item.title} (${spMotiveAttachment ? 'inline' : 'motive ' + spMotiveId}, qty ${item.quantity}) to SP order ${spOrderId}`
+          `[SP Order] Added CreatorSE item ${item.title} (${motiveType}, qty ${item.quantity}) to SP order ${spOrderId}`
         )
       } else {
         // Base product — pre-designed, no custom motive

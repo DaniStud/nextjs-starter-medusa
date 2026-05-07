@@ -384,8 +384,12 @@ class ShirtplatformModuleService {
       amount: number
       motiveId?: number
       motiveAttachment?: string // base64-encoded image
+      motiveUrl?: string // publicly accessible URL to the design image
       motiveFilename?: string
       viewPosition?: string // e.g. "FRONT", "BACK" — defaults to "FRONT"
+      positionLeft?: string // left margin in mm (controls width with positionRight)
+      positionRight?: string // right margin in mm
+      positionTop?: string // top margin in mm
     }
   ): Promise<any> {
     const {
@@ -395,18 +399,35 @@ class ShirtplatformModuleService {
       amount,
       motiveId,
       motiveAttachment,
+      motiveUrl,
       motiveFilename,
       viewPosition = "FRONT",
+      positionLeft,
+      positionRight,
+      positionTop,
     } = options
 
-    // Build the motive reference: either by ID or inline attachment
+    // Build the motive reference: inline attachment, URL, or ID
     const motive: Record<string, any> = {}
     if (motiveAttachment) {
       motive.attachment = motiveAttachment
       if (motiveFilename) motive.filename = motiveFilename
+    } else if (motiveUrl) {
+      motive.url = motiveUrl
+      if (motiveFilename) motive.filename = motiveFilename
     } else if (motiveId) {
       motive.id = motiveId
     }
+
+    // Build position: use left/right/top if provided, otherwise center
+    const position: Record<string, string> =
+      positionLeft && positionRight
+        ? {
+            left: positionLeft,
+            right: positionRight,
+            ...(positionTop ? { top: positionTop } : {}),
+          }
+        : { horizontalCenter: "0", verticalCenter: "0" }
 
     const payload = {
       creatorse_design: {
@@ -426,10 +447,7 @@ class ShirtplatformModuleService {
                 {
                   creatorse_designElementMotive: {
                     motive,
-                    position: {
-                      horizontalCenter: "0",
-                      verticalCenter: "0",
-                    },
+                    position,
                   },
                 },
               ],
