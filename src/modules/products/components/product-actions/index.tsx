@@ -12,8 +12,6 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { t } from "@lib/i18n"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
-import ProductExpressCheckout from "../express-checkout"
-import { useCartDrawer } from "@lib/context/cart-drawer-context"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -36,26 +34,15 @@ export default function ProductActions({
 }: ProductActionsProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
-  const [quantity, setQuantity] = useState(1)
   const countryCode = useParams().countryCode as string
-  const { openDrawer } = useCartDrawer()
 
-  // Preselect the smallest variant (first option value for each option)
+  // If there is only 1 variant, preselect the options
   useEffect(() => {
     if (product.variants?.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
       setOptions(variantOptions ?? {})
-    } else if ((product.variants?.length ?? 0) > 1 && product.options?.length) {
-      const defaultOptions: Record<string, string> = {}
-      for (const option of product.options) {
-        const firstValue = option.values?.[0]?.value
-        if (firstValue) {
-          defaultOptions[option.id] = firstValue
-        }
-      }
-      setOptions(defaultOptions)
     }
-  }, [product.variants, product.options])
+  }, [product.variants])
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
@@ -117,11 +104,10 @@ export default function ProductActions({
     if (!selectedVariant?.id) return null
 
     setIsAdding(true)
-    openDrawer()
 
     await addToCart({
       variantId: selectedVariant.id,
-      quantity,
+      quantity: 1,
       countryCode,
     })
 
@@ -130,21 +116,10 @@ export default function ProductActions({
 
   return (
     <>
-      <div className="flex flex-col gap-y-4 flex-1" ref={actionsRef}>
-        <ProductPrice product={product} variant={selectedVariant} />
-
-        {product.description && (
-          <p
-            className="text-base text-stone-600 whitespace-pre-line"
-            data-testid="product-description"
-          >
-            {product.description}
-          </p>
-        )}
-
-        <div className="mt-6 lg:mt-auto">
+      <div className="flex flex-col gap-y-2" ref={actionsRef}>
+        <div>
           {(product.variants?.length ?? 0) > 1 && (
-            <div className="flex flex-col gap-y-4 mb-4">
+            <div className="flex flex-col gap-y-4">
               {(product.options || []).map((option) => {
                 return (
                   <div key={option.id}>
@@ -159,62 +134,33 @@ export default function ProductActions({
                   </div>
                 )
               })}
+              <Divider />
             </div>
           )}
+        </div>
 
-        {/* Quantity selector + Add to cart button side by side */}
-        <div className="flex flex-row items-stretch gap-4 w-full">
-          <div className="flex items-center border border-stone-300 rounded-none shrink-0 w-fit">
-            <button
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-base sm:text-lg font-medium hover:bg-stone-50 transition-colors"
-              disabled={quantity <= 1}
-              aria-label={t("productActions.decreaseQuantity")}
-            >
-              −
-            </button>
-            <span className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-xs sm:text-sm font-medium border-x border-stone-300">
-              {quantity}
-            </span>
-            <button
-              onClick={() => setQuantity((q) => q + 1)}
-              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-base sm:text-lg font-medium hover:bg-stone-50 transition-colors"
-              aria-label={t("productActions.increaseQuantity")}
-            >
-              +
-            </button>
-          </div>
+        <ProductPrice product={product} variant={selectedVariant} />
 
-          <button
-            onClick={handleAddToCart}
-            disabled={
-              !inStock ||
-              !selectedVariant ||
-              !!disabled ||
-              isAdding ||
-              !isValidVariant
-            }
-            className="flex-1 bg-brand hover:bg-brand-dark text-white py-4 text-base font-semibold rounded-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            data-testid="add-product-button"
-          >
-            {isAdding
-              ? t("productActions.adding")
-              : !selectedVariant && !options
-                ? t("productActions.selectVariant")
-                : !inStock || !isValidVariant
-                  ? t("productActions.outOfStock")
-                  : t("productActions.addToCart")}
-          </button>
-        </div>
-        <div className="min-h-[44px]">
-          <ProductExpressCheckout
-            product={product}
-            variant={selectedVariant}
-            quantity={quantity}
-            countryCode={countryCode}
-          />
-        </div>
-        </div>
+        <Button
+          onClick={handleAddToCart}
+          disabled={
+            !inStock ||
+            !selectedVariant ||
+            !!disabled ||
+            isAdding ||
+            !isValidVariant
+          }
+          variant="primary"
+          className="w-full h-10"
+          isLoading={isAdding}
+          data-testid="add-product-button"
+        >
+          {!selectedVariant && !options
+            ? t("productActions.selectVariant")
+            : !inStock || !isValidVariant
+            ? t("productActions.outOfStock")
+            : t("productActions.addToCart")}
+        </Button>
         <MobileActions
           product={product}
           variant={selectedVariant}
