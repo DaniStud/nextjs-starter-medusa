@@ -49,7 +49,7 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <Container className="relative aspect-[29/34] md:aspect-[4/5] w-full overflow-hidden bg-ui-bg-subtle !shadow-none !border-none">
+        <Container className="relative aspect-[29/34] md:aspect-[4/5] w-full overflow-hidden bg-white !shadow-none !border-none">
           {!!images[current]?.url && (
             <Image
               src={images[current].url}
@@ -58,7 +58,7 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
               alt={t("imageGallery.productImage", { n: current + 1 })}
               fill
               sizes="(max-width: 767px) calc(100vw - 48px), (max-width: 1023px) calc(66vw - 48px), calc(33vw - 48px)"
-              style={{ objectFit: "cover" }}
+              style={{ objectFit: "contain" }}
             />
           )}
         </Container>
