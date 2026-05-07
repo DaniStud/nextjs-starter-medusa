@@ -102,7 +102,6 @@
     "productActions.selectOptions": "Select Options",
     "productActions.decreaseQuantity": "Decrease quantity",
     "productActions.increaseQuantity": "Increase quantity",
-    "productActions.addToCartFull": "Add to cart",
 
     "optionSelect.select": "Select {{title}}",
 
@@ -308,7 +307,7 @@
     "quickAdd.outOfStock": "Out of stock",
 
     "about.heading": "About 10SHRTS",
-    "about.body": "Premium quality essentials — curated for everyday style. More information coming soon.",
+    "about.body": "Premium quality essentials \u2014 curated for everyday style. More information coming soon.",
 
     "shipping.unlocked": "Free Shipping unlocked!",
     "shipping.unlock": "Unlock Free Shipping",
@@ -492,12 +491,11 @@
 
     "productActions.selectVariant": "Vælg variant",
     "productActions.outOfStock": "Udsolgt",
-    "productActions.addToCart": "Tilføj",
+    "productActions.addToCart": "Læg i kurv",
     "productActions.adding": "Tilføjer...",
     "productActions.selectOptions": "Vælg muligheder",
     "productActions.decreaseQuantity": "Mindsk antal",
     "productActions.increaseQuantity": "Forøg antal",
-    "productActions.addToCartFull": "Tilføj",
 
     "optionSelect.select": "Vælg {{title}}",
 
@@ -697,13 +695,13 @@
     "store.priceLowHigh": "Pris: Lav → Høj",
     "store.priceHighLow": "Pris: Høj → Lav",
 
-    "quickAdd.addToCart": "TILFØJ",
+    "quickAdd.addToCart": "Læg i kurv",
     "quickAdd.selectSize": "Vælg størrelse",
     "quickAdd.adding": "Tilføjer...",
     "quickAdd.outOfStock": "Udsolgt",
 
     "about.heading": "Om 10SHRTS",
-    "about.body": "Premium kvalitetsessentials — kurateret til hverdagens stil. Mere information kommer snart.",
+    "about.body": "Premium kvalitetsessentials \u2014 udvalgt til hverdagens stil. Mere information kommer snart.",
 
     "shipping.unlocked": "Gratis fragt aktiveret!",
     "shipping.unlock": "Aktiver gratis fragt",

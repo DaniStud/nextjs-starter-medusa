@@ -30,7 +30,7 @@ export default function CheckoutLayout({
             className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase font-heading font-bold tracking-wide"
             data-testid="store-link"
           >
-            10SHRTS
+            {t("nav.brand")}
           </LocalizedClientLink>
           <div className="flex-1 basis-0" />
         </nav>

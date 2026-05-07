@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout(props: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang="da" className={`${spaceGrotesk.variable} ${inter.variable}`}>
       <body className="flex flex-col min-h-screen font-sans">
         <CookieConsentBanner />
         <main className="flex-grow relative">{props.children}</main>

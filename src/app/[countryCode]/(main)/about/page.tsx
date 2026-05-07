@@ -2,8 +2,8 @@ import { Metadata } from "next"
 import { t } from "@lib/i18n"
 
 export const metadata: Metadata = {
-  title: "About | 10SHRTS",
-  description: "About 10SHRTS — Premium quality essentials.",
+  title: `${t("about.heading")} | ${t("nav.brand")}`,
+  description: t("about.body"),
 }
 
 export default function AboutPage() {
