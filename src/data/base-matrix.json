@@ -1,0 +1,12 @@
+{
+  "roles": [
+    { "id": "r1", "name": "Boy Mom" },
+    { "id": "r2", "name": "Fun Auntie" },
+    { "id": "r3", "name": "Introvert" }
+  ],
+  "passions": [
+    { "id": "p1", "name": "True Crime", "iconMapKey": "Skull" },
+    { "id": "p2", "name": "Iced Coffee", "iconMapKey": "CoffeeCup" },
+    { "id": "p3", "name": "Houseplants", "iconMapKey": "Plant" }
+  ]
+}

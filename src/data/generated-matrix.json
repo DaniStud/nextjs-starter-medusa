@@ -1,0 +1,92 @@
+[
+  {
+    "comboId": "boy-mom-true-crime",
+    "role": "Boy Mom",
+    "roleId": "r1",
+    "passion": "True Crime",
+    "passionId": "p1",
+    "iconMapKey": "Skull",
+    "title": "Boy Mom × True Crime",
+    "description": "The perfect gift for the Boy Mom who survives the chaos of raising sons by unwinding with cold cases and serial killer documentaries."
+  },
+  {
+    "comboId": "boy-mom-iced-coffee",
+    "role": "Boy Mom",
+    "roleId": "r1",
+    "passion": "Iced Coffee",
+    "passionId": "p2",
+    "iconMapKey": "CoffeeCup",
+    "title": "Boy Mom × Iced Coffee",
+    "description": "For the mom juggling boys and barely surviving on back-to-back iced coffees from dawn till the last bedtime story."
+  },
+  {
+    "comboId": "boy-mom-houseplants",
+    "role": "Boy Mom",
+    "roleId": "r1",
+    "passion": "Houseplants",
+    "passionId": "p3",
+    "iconMapKey": "Plant",
+    "title": "Boy Mom × Houseplants",
+    "description": "She keeps tiny humans alive all day and still manages to grow a thriving indoor jungle. Celebrate her green-thumb magic."
+  },
+  {
+    "comboId": "fun-auntie-true-crime",
+    "role": "Fun Auntie",
+    "roleId": "r2",
+    "passion": "True Crime",
+    "passionId": "p1",
+    "iconMapKey": "Skull",
+    "title": "Fun Auntie × True Crime",
+    "description": "The auntie who spoils the kids rotten and then stays up bingeing forensic files. She deserves something as bold as she is."
+  },
+  {
+    "comboId": "fun-auntie-iced-coffee",
+    "role": "Fun Auntie",
+    "roleId": "r2",
+    "passion": "Iced Coffee",
+    "passionId": "p2",
+    "iconMapKey": "CoffeeCup",
+    "title": "Fun Auntie × Iced Coffee",
+    "description": "She arrives with gifts, chaos, and a giant iced coffee in hand. The coolest auntie runs on caffeine and good vibes only."
+  },
+  {
+    "comboId": "fun-auntie-houseplants",
+    "role": "Fun Auntie",
+    "roleId": "r2",
+    "passion": "Houseplants",
+    "passionId": "p3",
+    "iconMapKey": "Plant",
+    "title": "Fun Auntie × Houseplants",
+    "description": "Part-time plant mom, full-time best auntie ever. Her apartment is a botanical garden and her love language is cuttings."
+  },
+  {
+    "comboId": "introvert-true-crime",
+    "role": "Introvert",
+    "roleId": "r3",
+    "passion": "True Crime",
+    "passionId": "p1",
+    "iconMapKey": "Skull",
+    "title": "Introvert × True Crime",
+    "description": "Happiest alone with a true crime podcast and zero social plans. This quirky gift speaks to their perfectly quiet obsession."
+  },
+  {
+    "comboId": "introvert-iced-coffee",
+    "role": "Introvert",
+    "roleId": "r3",
+    "passion": "Iced Coffee",
+    "passionId": "p2",
+    "iconMapKey": "CoffeeCup",
+    "title": "Introvert × Iced Coffee",
+    "description": "Does not want to talk about it, just hand over the iced coffee. A gift for the quietly caffeinated homebody in your life."
+  },
+  {
+    "comboId": "introvert-houseplants",
+    "role": "Introvert",
+    "roleId": "r3",
+    "passion": "Houseplants",
+    "passionId": "p3",
+    "iconMapKey": "Plant",
+    "title": "Introvert × Houseplants",
+    "description": "Plants never ask to hang out and that is exactly why they are the perfect companions for the happily introverted plant parent."
+  }
+]
