@@ -18,6 +18,10 @@ const stripe = stripeApiKey ? new Stripe(stripeApiKey) : null
 const processedEvents = new Set<string>()
 
 export default async function handler(req: Request, res: Response, next: NextFunction) {
+  if (!stripe) {
+    return res.status(503).send("Stripe is not configured (missing STRIPE_API_KEY)")
+  }
+
   const sig = req.headers["stripe-signature"] as string | undefined
   let event: Stripe.Event
 
