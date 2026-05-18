@@ -85,7 +85,21 @@ const StripePaymentButton = ({
     setSubmitting(true)
     setErrorMessage(null)
 
+    console.log("[PaymentButton] handlePayment called", {
+      paymentType,
+      hasStripe: !!stripe,
+      hasElements: !!elements,
+      hasSession: !!session,
+      hasClientSecret: !!session?.data?.client_secret,
+      notReady,
+    })
+
     if (!stripe || !session?.data?.client_secret || !cart) {
+      console.log("[PaymentButton] Early return - missing deps", {
+        stripe: !!stripe,
+        clientSecret: !!session?.data?.client_secret,
+        cart: !!cart,
+      })
       setSubmitting(false)
       return
     }
@@ -95,7 +109,10 @@ const StripePaymentButton = ({
       process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8000"
     const returnUrl = `${baseUrl}/${countryCode}/checkout?payment_intent_client_secret=${session.data.client_secret}`
 
+    console.log("[PaymentButton] returnUrl:", returnUrl)
+
     if (paymentType === "mobilepay") {
+      console.log("[PaymentButton] Attempting MobilePay confirmation...")
       // MobilePay: use dedicated confirmation method with redirect
       const { error } = await (stripe as any).confirmMobilepayPayment(
         session.data.client_secret as string,
@@ -109,6 +126,8 @@ const StripePaymentButton = ({
           return_url: returnUrl,
         }
       )
+
+      console.log("[PaymentButton] MobilePay result:", { error: error?.message || error })
 
       if (error) {
         setErrorMessage(error.message || t("checkout.unexpectedError"))

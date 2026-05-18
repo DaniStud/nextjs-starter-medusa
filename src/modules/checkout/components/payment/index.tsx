@@ -43,7 +43,15 @@ const Payment = ({
 
   // Initiate Stripe payment session on mount (needed for both MobilePay and Card)
   useEffect(() => {
+    console.log("[Payment] useEffect check:", {
+      hasActiveSession: !!activeSession,
+      hasStripeProvider: !!stripeProvider,
+      stripeProviderId: stripeProvider?.id,
+      sessionInitiated,
+      availablePaymentMethods: availablePaymentMethods?.map((m: any) => m.id),
+    })
     if (!activeSession && stripeProvider && !sessionInitiated) {
+      console.log("[Payment] Initiating payment session for:", stripeProvider.id)
       setSessionInitiated(true)
       initiatePaymentSession(cart, { provider_id: stripeProvider.id })
     }
