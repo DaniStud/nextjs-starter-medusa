@@ -3,10 +3,15 @@ import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import Stripe from "stripe"
 import { WebhookEventTracker } from "../utils"
 
-const stripe = new Stripe(process.env.STRIPE_API_KEY || "")
+const stripeApiKey = process.env.STRIPE_API_KEY
+const stripe = stripeApiKey ? new Stripe(stripeApiKey) : null
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  if (!stripe) {
+    return res.status(503).send("Stripe is not configured (missing STRIPE_API_KEY)")
+  }
+
   const sig = req.headers["stripe-signature"] as string | undefined
   const expressReq = req as any
   

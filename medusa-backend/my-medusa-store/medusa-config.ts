@@ -15,21 +15,25 @@ module.exports = defineConfig({
     }
   },
   modules: [
-    {
-      // Attach Stripe as a provider to the existing payment module
-      key: "payment",
-      options: {
-        providers: [
+    // Stripe payment — uncomment and add STRIPE_API_KEY to .env to enable
+    ...(process.env.STRIPE_API_KEY
+      ? [
           {
-            resolve: "@medusajs/payment-stripe",
-            id: "stripe",
+            key: "payment",
             options: {
-              apiKey: process.env.STRIPE_API_KEY,
+              providers: [
+                {
+                  resolve: "@medusajs/payment-stripe",
+                  id: "stripe",
+                  options: {
+                    apiKey: process.env.STRIPE_API_KEY,
+                  },
+                },
+              ],
             },
           },
-        ],
-      },
-    },
+        ]
+      : []),
     {
       // Shirtplatform print-on-demand API client
       resolve: "./src/modules/shirtplatform",

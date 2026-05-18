@@ -11,7 +11,8 @@ import { NextFunction, Request, Response } from "express"
 import Stripe from "stripe"
 
 const stripeSecret = process.env.STRIPE_WEBHOOK_SECRET
-const stripe = new Stripe(process.env.STRIPE_API_KEY || "")
+const stripeApiKey = process.env.STRIPE_API_KEY
+const stripe = stripeApiKey ? new Stripe(stripeApiKey) : null
 
 // Idempotency tracker
 const processedEvents = new Set<string>()

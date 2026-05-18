@@ -96,21 +96,19 @@ const StripePaymentButton = ({
     const returnUrl = `${baseUrl}/${countryCode}/checkout?payment_intent_client_secret=${session.data.client_secret}`
 
     if (paymentType === "mobilepay") {
-      // MobilePay: redirect-based confirmation (no Elements needed)
-      const { error } = await (stripe as any).confirmPayment({
-        clientSecret: session.data.client_secret as string,
-        confirmParams: {
+      // MobilePay: use dedicated confirmation method with redirect
+      const { error } = await (stripe as any).confirmMobilepayPayment(
+        session.data.client_secret as string,
+        {
           payment_method: {
-            type: "mobilepay",
             billing_details: {
               name: `${cart.shipping_address?.first_name || ""} ${cart.shipping_address?.last_name || ""}`.trim(),
               email: cart.email || undefined,
             },
           },
           return_url: returnUrl,
-        },
-        redirect: "always",
-      })
+        }
+      )
 
       if (error) {
         setErrorMessage(error.message || t("checkout.unexpectedError"))
