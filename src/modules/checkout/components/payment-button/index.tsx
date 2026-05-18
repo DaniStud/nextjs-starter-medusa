@@ -12,11 +12,13 @@ import ErrorMessage from "../error-message"
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
   "data-testid": string
+  paymentType?: "mobilepay" | "card"
 }
 
 const PaymentButton: React.FC<PaymentButtonProps> = ({
   cart,
   "data-testid": dataTestId,
+  paymentType = "card",
 }) => {
   const notReady =
     !cart ||
@@ -34,6 +36,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
           notReady={notReady}
           cart={cart}
           data-testid={dataTestId}
+          paymentType={paymentType}
         />
       )
     case isManual(paymentSession?.provider_id):
@@ -49,10 +52,12 @@ const StripePaymentButton = ({
   cart,
   notReady,
   "data-testid": dataTestId,
+  paymentType = "card",
 }: {
   cart: HttpTypes.StoreCart
   notReady: boolean
   "data-testid"?: string
+  paymentType?: "mobilepay" | "card"
 }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -80,12 +85,47 @@ const StripePaymentButton = ({
     setSubmitting(true)
     setErrorMessage(null)
 
-    if (!stripe || !elements || !cart) {
+    if (!stripe || !session?.data?.client_secret || !cart) {
       setSubmitting(false)
       return
     }
 
-    // Validate the PaymentElement form first
+    const countryCode = cart.shipping_address?.country_code || "dk"
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8000"
+    const returnUrl = `${baseUrl}/${countryCode}/checkout?payment_intent_client_secret=${session.data.client_secret}`
+
+    if (paymentType === "mobilepay") {
+      // MobilePay: redirect-based confirmation (no Elements needed)
+      const { error } = await (stripe as any).confirmPayment({
+        clientSecret: session.data.client_secret as string,
+        confirmParams: {
+          payment_method: {
+            type: "mobilepay",
+            billing_details: {
+              name: `${cart.shipping_address?.first_name || ""} ${cart.shipping_address?.last_name || ""}`.trim(),
+              email: cart.email || undefined,
+            },
+          },
+          return_url: returnUrl,
+        },
+        redirect: "always",
+      })
+
+      if (error) {
+        setErrorMessage(error.message || t("checkout.unexpectedError"))
+        setSubmitting(false)
+      }
+      // If redirect happens, we won't reach here
+      return
+    }
+
+    // Card flow: use PaymentElement
+    if (!elements) {
+      setSubmitting(false)
+      return
+    }
+
     const { error: submitError } = await elements.submit()
     if (submitError) {
       setErrorMessage(submitError.message || t("checkout.checkPaymentDetails"))
@@ -93,21 +133,16 @@ const StripePaymentButton = ({
       return
     }
 
-    const countryCode = cart.shipping_address?.country_code || "us"
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8000"
-
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
-      clientSecret: session?.data.client_secret as string,
+      clientSecret: session.data.client_secret as string,
       confirmParams: {
-        return_url: `${baseUrl}/${countryCode}/checkout?step=review&payment_intent_client_secret=${session?.data.client_secret}`,
+        return_url: returnUrl,
       },
       redirect: "if_required",
     })
 
     if (error) {
-      // If the error has a payment intent that succeeded/requires_capture, still complete
       const pi = error.payment_intent
       if (
         pi &&
@@ -131,7 +166,6 @@ const StripePaymentButton = ({
       return
     }
 
-    // For any other status, stop submitting and let the user know
     setSubmitting(false)
   }
 
@@ -144,7 +178,9 @@ const StripePaymentButton = ({
         isLoading={submitting}
         data-testid={dataTestId}
       >
-        {t("checkout.placeOrder")}
+        {paymentType === "mobilepay"
+          ? t("checkout.payWithMobilePay") || "Betal med MobilePay"
+          : t("checkout.placeOrder")}
       </Button>
       <ErrorMessage
         error={errorMessage}
