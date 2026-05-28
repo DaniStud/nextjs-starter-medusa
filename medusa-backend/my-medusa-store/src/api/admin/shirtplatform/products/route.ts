@@ -123,8 +123,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     })
   }
 
-  const colorById = new Map(detail.colors.map((c) => [c.id, c]))
-  const sizeById = new Map(detail.sizes.map((s) => [s.id, s]))
+  const colorById = new Map<number, { id: number; name: string; hexCode?: string }>(
+    detail.colors.map((c) => [c.id, c])
+  )
+  const sizeById = new Map<number, { id: number; name: string }>(
+    detail.sizes.map((s) => [s.id, s])
+  )
 
   const unknownColors = colorIds.filter((id) => !colorById.has(id))
   const unknownSizes = sizeIds.filter((id) => !sizeById.has(id))
