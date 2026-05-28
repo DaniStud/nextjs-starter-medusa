@@ -66,12 +66,11 @@ export interface ShirtplatformAssignedSize {
 
 export interface ShirtplatformProductSku {
   id: number
-  sku: string
-  assignedColor?: { id: number }
-  assignedSize?: { id: number }
-  // Some APIs embed color/size directly
-  color?: ShirtplatformProductColor
-  size?: ShirtplatformProductSize
+  stockId?: number
+  available?: boolean
+  plu?: string
+  assignedColor?: { id: number; productColor?: ShirtplatformProductColor }
+  assignedSize?: { id: number; productSize?: ShirtplatformProductSize }
 }
 
 export interface ShirtplatformPrice {
@@ -129,6 +128,39 @@ export interface ShirtplatformFulfillmentItem {
   trackingNumber?: string
   trackingUrl?: string
   name?: string
+}
+
+// ---------------------------------------------------------------------------
+// Admin-UI-friendly summary shapes
+// (flattened from the raw SP API response, used by the admin product-builder)
+// ---------------------------------------------------------------------------
+
+export interface ShirtplatformBaseProductSummary {
+  id: number
+  name: string
+  active: boolean
+}
+
+export interface ShirtplatformBaseProductDetail {
+  id: number
+  name: string
+  description?: string
+  active: boolean
+  colors: { id: number; name: string; hexCode?: string }[]
+  sizes: { id: number; name: string }[]
+  /** Only colors that appear in at least one SKU (i.e. actually orderable) */
+  availableColorIds: number[]
+  /** Only sizes that appear in at least one SKU */
+  availableSizeIds: number[]
+  /** Each entry = an available (color, size) combination produced by SP.
+   *  `spSkuId` is the Shirtplatform ProductSku record ID.
+   *  `stockId` is the underlying stock-item ID.
+   *  `sku` is a synthetic string for use as Medusa variant.sku. */
+  skuMatrix: { colorId: number; sizeId: number; spSkuId: number; stockId: number; sku: string }[]
+  /** Views available on this product (FRONT, BACK, etc.) with their SP IDs */
+  views: { id: number; position: string; defaultView: boolean }[]
+  /** SP production base price in EUR (informational; retail price set in Medusa) */
+  basePriceEur: number
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +285,38 @@ class ShirtplatformModuleService {
     return response.json() as Promise<T>
   }
 
+  /**
+   * Fetch a binary resource (image) from the SP API.
+   * Returns the raw Buffer and content-type.
+   */
+  async requestBinary(
+    endpoint: string,
+    isRetry = false
+  ): Promise<{ buffer: Buffer; contentType: string }> {
+    const token = await this.getToken()
+
+    const response = await fetch(`${this.apiUrl}${endpoint}`, {
+      method: "GET",
+      headers: {
+        "x-auth-token": token,
+        Accept: "image/png, image/jpeg, image/svg+xml, */*",
+      },
+    })
+
+    if (response.status === 401 && !isRetry) {
+      await this.invalidateToken()
+      return this.requestBinary(endpoint, true)
+    }
+
+    if (!response.ok) {
+      throw new Error(`Shirtplatform image API error (${response.status})`)
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    const contentType = response.headers.get("content-type") ?? "image/png"
+    return { buffer: Buffer.from(arrayBuffer), contentType }
+  }
+
   // -------------------------------------------------------------------------
   // Product API
   //
@@ -301,11 +365,21 @@ class ShirtplatformModuleService {
    * Fetch SKUs for a product.
    */
   async getProductSkus(productId: number): Promise<ShirtplatformProductSku[]> {
-    const data = await this.request<any>(
-      `/accounts/${this.accountId}/shops/${this.shopId}/products/${productId}/sku`
-    )
-    const items = data?.pagedData?.productSku ?? []
-    return Array.isArray(items) ? items : [items]
+    const PAGE_SIZE = 100
+    let page = 0
+    const all: ShirtplatformProductSku[] = []
+    while (true) {
+      const data = await this.request<any>(
+        `/accounts/${this.accountId}/shops/${this.shopId}/products/${productId}/sku?page=${page}&size=${PAGE_SIZE}`
+      )
+      const items = data?.pagedData?.productSku ?? []
+      const arr: any[] = Array.isArray(items) ? items : [items]
+      all.push(...arr)
+      const total = data?.pagedData?.totalElements ?? 0
+      if (all.length >= total || arr.length < PAGE_SIZE) break
+      page++
+    }
+    return all
   }
 
   /**
@@ -328,6 +402,112 @@ class ShirtplatformModuleService {
     if (Array.isArray(data)) return data
     const items = data?.pagedData?.country ?? data?.list ?? data?.data ?? data?.countries ?? []
     return Array.isArray(items) ? items : [items]
+  }
+
+  // -------------------------------------------------------------------------
+  // Product Preview Images
+  //
+  // GET .../products/{id}/image
+  //   → default preview (default view + default color)
+  //
+  // GET .../products/{id}/assignedViews/{viewId}/assignedColors/{colorId}/image
+  //   → specific view + color preview
+  // -------------------------------------------------------------------------
+
+  /**
+   * Fetch the default product preview image (default view + default color).
+   */
+  async getProductPreviewImage(productId: number): Promise<{ buffer: Buffer; contentType: string }> {
+    return this.requestBinary(
+      `/accounts/${this.accountId}/shops/${this.shopId}/products/${productId}/image`
+    )
+  }
+
+  /**
+   * Fetch a rendered preview image for a specific view + color combination.
+   */
+  async getProductViewColorImage(
+    productId: number,
+    assignedViewId: number,
+    assignedColorId: number
+  ): Promise<{ buffer: Buffer; contentType: string }> {
+    return this.requestBinary(
+      `/accounts/${this.accountId}/shops/${this.shopId}/products/${productId}/assignedViews/${assignedViewId}/assignedColors/${assignedColorId}/image`
+    )
+  }
+
+  /**
+   * Fetch the SVG preview of a designed product (motive placed on shirt).
+   * POST .../designedProducts/preview with a CreatorSE-like body.
+   */
+  async getDesignedProductPreview(
+    productId: number,
+    assignedColorId: number,
+    viewPosition: string,
+    motiveUrl?: string,
+    motiveId?: number,
+    positionLeft?: string,
+    positionRight?: string,
+    positionTop?: string
+  ): Promise<{ buffer: Buffer; contentType: string }> {
+    const motive: Record<string, any> = {}
+    if (motiveUrl) {
+      motive.url = motiveUrl
+    } else if (motiveId) {
+      motive.id = motiveId
+    }
+
+    const position: Record<string, string> =
+      positionLeft && positionRight
+        ? {
+            left: positionLeft,
+            right: positionRight,
+            ...(positionTop ? { top: positionTop } : {}),
+          }
+        : { horizontalCenter: "0", verticalCenter: "0" }
+
+    const token = await this.getToken()
+    const body = {
+      creatorse_design: {
+        productId,
+        assignedColor: { id: assignedColorId },
+        compositions: {
+          creatorse_composition: [
+            {
+              productArea: {
+                assignedView: { view: { position: viewPosition } },
+              },
+              elements: [
+                {
+                  creatorse_designElementMotive: { motive, position },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    }
+
+    const response = await fetch(
+      `${this.apiUrl}/accounts/${this.accountId}/shops/${this.shopId}/designedProducts/preview`,
+      {
+        method: "POST",
+        headers: {
+          "x-auth-token": token,
+          Accept: "image/png, image/svg+xml, */*",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Shirtplatform designedProducts/preview error (${response.status})`)
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    const contentType = response.headers.get("content-type") ?? "image/svg+xml"
+    return { buffer: Buffer.from(arrayBuffer), contentType }
   }
 
   // -------------------------------------------------------------------------
@@ -492,6 +672,202 @@ class ShirtplatformModuleService {
         body: JSON.stringify({ url, topic }),
       }
     )
+  }
+
+  // -------------------------------------------------------------------------
+  // Admin product-builder helpers
+  //
+  // The admin UI needs:
+  //   1. A fast list of base products to pick from   → getBaseProductSummaries()
+  //   2. The colors/sizes/SKUs for a chosen product  → getBaseProductDetail(id)
+  //
+  // Both are cached in Redis (1h) since the SP catalog rarely changes day-to-day
+  // and the admin will hit these endpoints many times while building a product.
+  // -------------------------------------------------------------------------
+
+  private static readonly CATALOG_SUMMARIES_KEY = "shirtplatform_base_summaries"
+  private static readonly CATALOG_DETAIL_KEY_PREFIX = "shirtplatform_base_detail:"
+  private static readonly CATALOG_TTL_SECONDS = 60 * 60 // 1 hour
+
+  async getBaseProductSummaries(
+    forceRefresh = false
+  ): Promise<ShirtplatformBaseProductSummary[]> {
+    const client = getRedis()
+    const key = ShirtplatformModuleService.CATALOG_SUMMARIES_KEY
+
+    if (!forceRefresh && client) {
+      try {
+        const cached = await client.get(key)
+        if (cached) return JSON.parse(cached)
+      } catch {
+        // fall through to live fetch
+      }
+    }
+
+    const raw = await this.listAllProducts()
+    const summaries: ShirtplatformBaseProductSummary[] = raw
+      .filter((p: any) => !p.deleted && p.active !== false)
+      .map((p: any) => ({
+        id: p.id,
+        name: p.name ?? `Product ${p.id}`,
+        active: p.active !== false,
+      }))
+
+    if (client) {
+      try {
+        await client.set(
+          key,
+          JSON.stringify(summaries),
+          "EX",
+          ShirtplatformModuleService.CATALOG_TTL_SECONDS
+        )
+      } catch {
+        // best-effort cache
+      }
+    }
+    return summaries
+  }
+
+  async getBaseProductDetail(
+    productId: number,
+    forceRefresh = false
+  ): Promise<ShirtplatformBaseProductDetail> {
+    const client = getRedis()
+    const key = `${ShirtplatformModuleService.CATALOG_DETAIL_KEY_PREFIX}${productId}`
+
+    if (!forceRefresh && client) {
+      try {
+        const cached = await client.get(key)
+        if (cached) return JSON.parse(cached)
+      } catch {
+        // fall through
+      }
+    }
+
+    const [expanded, skus, prices] = await Promise.all([
+      this.getProductExpanded(productId),
+      this.getProductSkus(productId),
+      this.getProductPrices(productId),
+    ])
+
+    const detail = buildBaseProductDetail(expanded, skus, prices)
+
+    if (client) {
+      try {
+        await client.set(
+          key,
+          JSON.stringify(detail),
+          "EX",
+          ShirtplatformModuleService.CATALOG_TTL_SECONDS
+        )
+      } catch {
+        // best-effort cache
+      }
+    }
+    return detail
+  }
+
+  /**
+   * Drop all cached catalog entries. Call after a manual sync, or when the
+   * admin clicks "Refresh from Shirtplatform".
+   */
+  async invalidateCatalogCache(): Promise<void> {
+    const client = getRedis()
+    if (!client) return
+    try {
+      const keys = await client.keys(
+        `${ShirtplatformModuleService.CATALOG_DETAIL_KEY_PREFIX}*`
+      )
+      if (keys.length > 0) await client.del(...keys)
+      await client.del(ShirtplatformModuleService.CATALOG_SUMMARIES_KEY)
+    } catch {
+      // ignore
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pure helpers (no service state) — exported for testing
+// ---------------------------------------------------------------------------
+
+export function buildBaseProductDetail(
+  expanded: any,
+  skus: any[],
+  prices: any[]
+): ShirtplatformBaseProductDetail {
+  const localizations =
+    expanded.localizations?.productLocalized ?? expanded.localizations ?? []
+  const locArr = Array.isArray(localizations) ? localizations : [localizations]
+  const enLocale =
+    locArr.find((l: any) => l?.language?.code === "en") ?? locArr[0]
+  const name = enLocale?.name ?? expanded.name ?? `Product ${expanded.id}`
+  const description = enLocale?.description ?? undefined
+
+  const rawColors =
+    expanded.assignedColors?.assignedProductColorExpanded ?? []
+  const assignedColors: any[] = Array.isArray(rawColors) ? rawColors : [rawColors]
+  const rawSizes = expanded.assignedSizes?.assignedProductSizeExpanded ?? []
+  const assignedSizes: any[] = Array.isArray(rawSizes) ? rawSizes : [rawSizes]
+
+  const colors = assignedColors
+    .filter((ac) => ac?.productColor)
+    .map((ac) => ({
+      id: ac.id as number,
+      name: (ac.productColor.name as string) ?? `Color ${ac.id}`,
+      hexCode: ac.productColor.hexCode as string | undefined,
+    }))
+
+  const sizes = assignedSizes
+    .filter((as_) => as_?.productSize)
+    .map((as_) => ({
+      id: as_.id as number,
+      name: (as_.productSize.name as string) ?? `Size ${as_.id}`,
+    }))
+
+  const skuMatrix = skus
+    .filter((s) => s?.assignedColor?.id && s?.assignedSize?.id)
+    .map((s) => ({
+      colorId: s.assignedColor.id as number,
+      sizeId: s.assignedSize.id as number,
+      spSkuId: s.id as number,
+      stockId: (s.stockId ?? s.id) as number,
+      // Synthetic SKU for Medusa: SP-{productId}-{colorAssignmentId}-{sizeAssignmentId}
+      sku: `SP-${expanded.id}-${s.assignedColor.id}-${s.assignedSize.id}`,
+    }))
+
+  // Derive which colors and sizes actually appear in at least one SKU.
+  // The expanded product can list colors/sizes that have no SKU intersection
+  // (e.g. a color discontinued for certain sizes). The wizard should only
+  // offer selectable options — never show impossible variants.
+  const availableColorIds = [...new Set(skuMatrix.map((s) => s.colorId))]
+  const availableSizeIds = [...new Set(skuMatrix.map((s) => s.sizeId))]
+
+  // Extract views from expanded product
+  const rawViews =
+    expanded.assignedViews?.assignedProductViewExpanded ?? []
+  const viewsArr: any[] = Array.isArray(rawViews) ? rawViews : [rawViews]
+  const views = viewsArr
+    .filter((v) => v?.id)
+    .map((v) => ({
+      id: v.id as number,
+      position: (v.productView?.position ?? v.view?.position ?? "FRONT") as string,
+      defaultView: Boolean(v.defaultView),
+    }))
+
+  const basePriceEur = Number(prices?.[0]?.price ?? 0)
+
+  return {
+    id: expanded.id,
+    name,
+    description,
+    active: expanded.active !== false,
+    colors,
+    sizes,
+    availableColorIds,
+    availableSizeIds,
+    skuMatrix,
+    views,
+    basePriceEur,
   }
 }
 

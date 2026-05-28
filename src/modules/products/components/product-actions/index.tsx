@@ -35,48 +35,13 @@ export default function ProductActions({
   const [isAdding, setIsAdding] = useState(false)
   const countryCode = useParams().countryCode as string
 
-  // Preselect the smallest size and other options
+  // If there is only 1 variant, preselect the options
   useEffect(() => {
-    if (product.variants && product.variants.length > 0) {
-      // 1. Initialize options with the first variant's options as a baseline
-      // (This ensures we have a valid selection for non-size options like color)
-      const firstVariantOptions = optionsAsKeymap(product.variants[0].options)
-      const newOptions = { ...firstVariantOptions }
-
-      // 2. Identify the "Size" option if it exists
-      const sizeOption = product.options?.find(
-        (o) => o.title?.toLowerCase() === "size"
-      )
-
-      if (sizeOption) {
-        const SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
-        
-        // Find the "smallest" available size among all variants
-        let smallestSize: string | undefined
-        let smallestIndex = Infinity
-
-        product.variants.forEach((v) => {
-          const sizeVal = v.options?.find((o) => o.option_id === sizeOption.id)?.value
-          if (sizeVal) {
-            const index = SIZE_ORDER.indexOf(sizeVal.toUpperCase())
-            if (index !== -1 && index < smallestIndex) {
-              smallestIndex = index
-              smallestSize = sizeVal
-            } else if (index === -1 && smallestIndex === Infinity) {
-              // Fallback if size not in our list: keep the first one we find
-              smallestSize = sizeVal
-            }
-          }
-        })
-
-        if (smallestSize) {
-          newOptions[sizeOption.id] = smallestSize
-        }
-      }
-
-      setOptions(newOptions)
+    if (product.variants?.length === 1) {
+      const variantOptions = optionsAsKeymap(product.variants[0].options)
+      setOptions(variantOptions ?? {})
     }
-  }, [product.variants, product.options])
+  }, [product.variants])
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {

@@ -1,8 +1,6 @@
 {
   "en": {
     "nav.brand": "10SHRTS",
-    "nav.store": "Store",
-    "nav.about": "About",
     "nav.cart": "Cart ({{count}})",
     "nav.menu": "Menu",
 
@@ -153,8 +151,6 @@
     "checkout.checkPaymentDetails": "Please check your payment details.",
     "checkout.unexpectedError": "An unexpected error occurred.",
     "checkout.completePayment": "Please complete payment details",
-    "checkout.saving": "Saving...",
-    "checkout.payWithMobilePay": "Pay with MobilePay",
     "checkout.addPromoCode": "Add Promotion Code(s)",
     "checkout.apply": "Apply",
     "checkout.promosApplied": "Promotion(s) applied:",
@@ -302,8 +298,6 @@
     "quickAdd.addToCart": "Add to cart",
     "quickAdd.selectSize": "Select size",
     "quickAdd.adding": "Adding...",
-    "about.heading": "About 10SHRTS",
-    "about.body": "10SHRTS is your premium destination for high-quality essentials. Curated for everyday style and longevity.",
     "quickAdd.outOfStock": "Out of stock",
 
     "shipping.unlocked": "Free Shipping unlocked!",
@@ -392,8 +386,6 @@
   },
   "da": {
     "nav.brand": "10SHRTS",
-    "nav.store": "Butik",
-    "nav.about": "Om os",
     "nav.cart": "Kurv ({{count}})",
     "nav.menu": "Menu",
 
@@ -544,8 +536,6 @@
     "checkout.checkPaymentDetails": "Kontroller venligst dine betalingsoplysninger.",
     "checkout.unexpectedError": "En uventet fejl opstod.",
     "checkout.completePayment": "Udfyld venligst betalingsoplysninger",
-    "checkout.saving": "Gemmer...",
-    "checkout.payWithMobilePay": "Betal med MobilePay",
     "checkout.addPromoCode": "Tilføj rabatkode(r)",
     "checkout.apply": "Anvend",
     "checkout.promosApplied": "Rabatkode(r) anvendt:",
@@ -693,8 +683,6 @@
     "quickAdd.addToCart": "Læg i kurv",
     "quickAdd.selectSize": "Vælg størrelse",
     "quickAdd.adding": "Tilføjer...",
-    "about.heading": "Om 10SHRTS",
-    "about.body": "10SHRTS er din premium destination for essentials af høj kvalitet. Udvalgt til hverdagens stil og lang holdbarhed.",
     "quickAdd.outOfStock": "Udsolgt",
 
     "shipping.unlocked": "Gratis fragt aktiveret!",

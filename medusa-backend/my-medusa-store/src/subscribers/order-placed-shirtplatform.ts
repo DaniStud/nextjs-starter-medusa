@@ -50,6 +50,15 @@ export default async function shirtplatformOrderForwardingHandler({
       return
     }
 
+    // Idempotency guard — if this order was already forwarded, skip.
+    // Re-runs happen on subscriber retries, manual replays, and webhook duplicates.
+    if (order.metadata?.shirtplatform_order_id) {
+      logger.info(
+        `[SP Order] Order ${orderId} already forwarded as SP order ${order.metadata.shirtplatform_order_id} — skipping`
+      )
+      return
+    }
+
     // -----------------------------------------------------------------------
     // 2. Resolve Shirtplatform country ID from customer shipping address
     // -----------------------------------------------------------------------
@@ -129,7 +138,13 @@ export default async function shirtplatformOrderForwardingHandler({
     const skippedItems: string[] = []
 
     for (const item of order.items ?? []) {
-      const meta = item.variant?.metadata ?? {}
+      // Line-item metadata wins over variant metadata. This lets CreatorSE custom
+      // designs (unique per order, e.g. user-uploaded motives) be carried on the
+      // line item without polluting the shared variant.
+      const meta: Record<string, any> = {
+        ...(item.variant?.metadata ?? {}),
+        ...(item.metadata ?? {}),
+      }
       const spProductId = meta.shirtplatform_product_id
       const spColorId = meta.shirtplatform_assigned_color_id
       const spSizeId = meta.shirtplatform_assigned_size_id
@@ -213,8 +228,28 @@ export default async function shirtplatformOrderForwardingHandler({
 
     logger.info(`[SP Order] ✅ Order ${orderId} successfully forwarded as SP order ${spOrderId}`)
   } catch (err: any) {
-    // Never re-throw — the Medusa order must be preserved even if SP forwarding fails
+    // Never re-throw — the Medusa order must be preserved even if SP forwarding fails.
+    // Persist the failure on the order so it surfaces in admin and can be retried later.
     logger.error(`[SP Order] ❌ Failed to forward order ${orderId} to Shirtplatform: ${err.message}`)
+
+    try {
+      const orderModule = container.resolve(Modules.ORDER) as any
+      const current = await orderModule.retrieveOrder(orderId).catch(() => null)
+      await orderModule.updateOrders([
+        {
+          id: orderId,
+          metadata: {
+            ...(current?.metadata ?? {}),
+            shirtplatform_error: String(err?.message ?? err),
+            shirtplatform_error_at: new Date().toISOString(),
+          },
+        },
+      ])
+    } catch (metaErr: any) {
+      logger.error(
+        `[SP Order] Additionally failed to record SP error on order ${orderId}: ${metaErr.message}`
+      )
+    }
   }
 }
 

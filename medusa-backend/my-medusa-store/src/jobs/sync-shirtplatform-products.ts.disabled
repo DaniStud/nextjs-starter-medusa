@@ -1,0 +1,9 @@
+// Original auto-creation sync job. Replaced by `refresh-shirtplatform-catalog.ts`
+// which only warms the base-catalog cache used by the admin product-builder.
+//
+// We no longer mirror the Shirtplatform catalog into the Medusa products table —
+// Medusa is now the source of truth for sellable products. Admins create products
+// via POST /admin/shirtplatform/products, picking a base shirt and a motive.
+//
+// Kept for reference only. To re-enable, rename back to `.ts` and remove
+// `refresh-shirtplatform-catalog.ts`.

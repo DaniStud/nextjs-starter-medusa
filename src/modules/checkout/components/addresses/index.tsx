@@ -7,10 +7,11 @@ import { HttpTypes } from "@medusajs/types"
 import { Heading, useToggleState } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
 import { t } from "@lib/i18n"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useActionState } from "react"
 import BillingAddress from "../billing_address"
 import ErrorMessage from "../error-message"
 import ShippingAddress from "../shipping-address"
+import { SubmitButton } from "../submit-button"
 
 const Addresses = ({
   cart,
@@ -27,35 +28,7 @@ const Addresses = ({
       : true
   )
 
-  const [message, setMessage] = useState<string | null>(
-    addressSaved ? "success" : null
-  )
-  const [saving, setSaving] = useState(false)
-  const formRef = useRef<HTMLFormElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const submitForm = useCallback(async () => {
-    if (!formRef.current) return
-    setSaving(true)
-    const formData = new FormData(formRef.current)
-    const result = await setAddresses(null, formData)
-    setMessage(result)
-    setSaving(false)
-  }, [])
-
-  const handleChange = useCallback(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      submitForm()
-    }, 1500)
-  }, [submitForm])
-
-  // Clean up timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [])
+  const [message, formAction] = useActionState(setAddresses, null)
 
   return (
     <div className="bg-white">
@@ -65,13 +38,10 @@ const Addresses = ({
           className="flex flex-row text-3xl-regular gap-x-2 items-baseline"
         >
           {t("checkout.shippingAddress")}
-          {message === "success" && !saving && <CheckCircleSolid />}
+          {addressSaved && message === "success" && <CheckCircleSolid />}
         </Heading>
-        {saving && (
-          <span className="text-sm text-ui-fg-subtle">{t("checkout.saving") || "Saving..."}</span>
-        )}
       </div>
-      <form ref={formRef} onChange={handleChange}>
+      <form action={formAction}>
         <div className="pb-8">
           <ShippingAddress
             customer={customer}
@@ -92,6 +62,9 @@ const Addresses = ({
               <BillingAddress cart={cart} />
             </div>
           )}
+          <SubmitButton className="mt-6" data-testid="submit-address-button">
+            {t("checkout.continueToDelivery")}
+          </SubmitButton>
           <ErrorMessage error={message !== "success" ? message : null} data-testid="address-error-message" />
         </div>
       </form>
