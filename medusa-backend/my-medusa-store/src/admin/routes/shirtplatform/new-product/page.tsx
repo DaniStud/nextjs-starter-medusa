@@ -851,27 +851,27 @@ const NewShirtplatformProductPage = () => {
           Back
         </Button>
         {step < 4 ? (
-          <Button
-            disabled={!canGoNext[step]}
-            onClick={() => setStep((s) => ((s + 1) as WizardStep))}
-          >
-            Next
-          </Button>
-        ) : (
           <div className="flex items-center gap-2">
-            {!skipMotive && motive?.url && (
+            {step === 3 && !skipMotive && motive?.url && (
               <Button
                 variant="secondary"
                 onClick={openComposedPreview}
-                disabled={submitting || previewLoading}
+                disabled={previewLoading}
               >
                 {previewLoading ? "Generating…" : "Preview design"}
               </Button>
             )}
-            <Button onClick={submit} disabled={submitting}>
-              {submitting ? "Creating…" : "Create product"}
+            <Button
+              disabled={!canGoNext[step]}
+              onClick={() => setStep((s) => ((s + 1) as WizardStep))}
+            >
+              Next
             </Button>
           </div>
+        ) : (
+          <Button onClick={submit} disabled={submitting}>
+            {submitting ? "Creating…" : "Create product"}
+          </Button>
         )}
       </div>
 
