@@ -7,11 +7,19 @@ import ShirtplatformModuleService from "../../../../modules/shirtplatform/servic
  *
  * Proxies a blank-shirt preview image from Shirtplatform (which requires auth).
  * The admin UI uses this to show a live shirt preview in the wizard.
+ *
+ * Optional motive params (for designed/composed preview):
+ *   &motive_url=...  — publicly accessible URL of the motive image
+ *   &position_top=...&position_left=...&position_right=...  — placement in mm
  */
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const productId = Number(req.query.product_id)
   const colorId = Number(req.query.color_id)
   const viewPosition = (req.query.view as string)?.toUpperCase() || "FRONT"
+  const motiveUrl = req.query.motive_url as string | undefined
+  const positionTop = req.query.position_top as string | undefined
+  const positionLeft = req.query.position_left as string | undefined
+  const positionRight = req.query.position_right as string | undefined
 
   if (!Number.isFinite(productId) || productId <= 0) {
     return res.status(400).json({ error: "product_id is required" })
@@ -22,6 +30,28 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   )
 
   try {
+    // If a motive URL is provided, try the designed product preview first
+    if (motiveUrl && Number.isFinite(colorId) && colorId > 0) {
+      try {
+        const designed = await shirtplatform.getDesignedProductPreview(
+          productId,
+          colorId,
+          viewPosition,
+          motiveUrl,
+          undefined,
+          positionLeft,
+          positionRight,
+          positionTop
+        )
+        res.setHeader("Content-Type", designed.contentType)
+        res.setHeader("Cache-Control", "public, max-age=300")
+        return res.send(designed.buffer)
+      } catch (designErr: any) {
+        console.warn(`[SP] designedProducts/preview failed, falling back to blank: ${designErr.message}`)
+        // Fall through to blank shirt preview
+      }
+    }
+
     // If we have both color and view, try to get the specific view+color image
     if (Number.isFinite(colorId) && colorId > 0) {
       const detail = await shirtplatform.getBaseProductDetail(productId)

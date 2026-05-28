@@ -80,6 +80,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         filename,
         mimeType,
         content: cleanedBase64,
+        access: "public",
       },
     ])
     const file = Array.isArray(created) ? created[0] : created

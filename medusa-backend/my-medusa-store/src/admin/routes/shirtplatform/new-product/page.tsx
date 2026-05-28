@@ -513,9 +513,9 @@ const NewShirtplatformProductPage = () => {
         <div className="px-6 py-6 space-y-4">
           <Heading level="h2">3 · Motive (design)</Heading>
 
-          {/* Shirt preview image */}
+          {/* Shirt preview + motive thumbnail */}
           {detail && selectedColorIds.size > 0 && (
-            <div className="flex gap-4 items-start">
+            <div className="flex gap-4 items-start flex-wrap">
               {(viewPosition === "FRONT" || viewPosition === "BOTH") && (
                 <div className="text-center">
                   <Text size="small" className="text-ui-fg-subtle mb-1">Front</Text>
@@ -546,6 +546,12 @@ const NewShirtplatformProductPage = () => {
                     className="max-h-48 rounded border bg-ui-bg-subtle"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
                   />
+                </div>
+              )}
+              {motivePreview && (
+                <div className="text-center">
+                  <Text size="small" className="text-ui-fg-subtle mb-1">Motive</Text>
+                  <img src={motivePreview} alt="Motive" className="max-h-48 rounded border bg-ui-bg-subtle" />
                 </div>
               )}
             </div>
@@ -634,11 +640,7 @@ const NewShirtplatformProductPage = () => {
                 </div>
               )}
 
-              {motivePreview && (
-                <div className="border rounded p-3 inline-block bg-ui-bg-subtle">
-                  <img src={motivePreview} alt="motive preview" className="max-h-48" />
-                </div>
-              )}
+
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
                 <div>
