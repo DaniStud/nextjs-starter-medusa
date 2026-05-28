@@ -3,9 +3,9 @@ import generatedMatrix from "@data/generated-matrix.json"
 import { IconDictionary } from "../../utils/iconMap"
 
 export const metadata: Metadata = {
-  title: "MVP Product Matrix",
+  title: "MVP Product Matrix — Pet Niche",
   description:
-    "Proof-of-concept: programmatically generated product combinations",
+    "Programmatically generated SEO-optimized product combinations for pet lovers",
 }
 
 type Combo = {
@@ -16,7 +16,10 @@ type Combo = {
   passionId: string
   iconMapKey: string | null
   title: string
+  bestKeyword?: string | null
+  bestVolume?: number
   description: string
+  shirtText?: string
 }
 
 export default function MvpTestPage() {
@@ -29,9 +32,15 @@ export default function MvpTestPage() {
         <h1 className="text-2xl font-heading font-bold uppercase tracking-wide text-ui-fg-base">
           MVP Product Matrix
         </h1>
-        <span className="inline-flex items-center self-start rounded-full bg-ui-bg-subtle px-3 py-1 text-sm font-medium text-ui-fg-muted">
-          {combos.length} products generated
-        </span>
+        <div className="flex gap-3 flex-wrap">
+          <span className="inline-flex items-center rounded-full bg-ui-bg-subtle px-3 py-1 text-sm font-medium text-ui-fg-muted">
+            {combos.length} products generated
+          </span>
+          <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">
+            {combos.filter((c) => c.bestVolume && c.bestVolume > 0).length} with
+            SEO data
+          </span>
+        </div>
       </div>
 
       {/* Grid */}
@@ -49,7 +58,18 @@ export default function MvpTestPage() {
                   return <DynamicIcon width={50} height={50} />
                 })()
               ) : (
-                <span className="text-xs">[Icon Missing]</span>
+                <span className="text-2xl">
+                  {combo.passion === "Wine" && "🍷"}
+                  {combo.passion === "Coffee" && "☕"}
+                  {combo.passion === "Gardening" && "🌱"}
+                  {combo.passion === "Reading" && "📚"}
+                  {combo.passion === "Yoga" && "🧘"}
+                  {combo.passion === "Knitting" && "🧶"}
+                  {combo.passion === "Hiking" && "🥾"}
+                  {combo.passion === "Cooking" && "👩‍🍳"}
+                  {combo.passion === "True Crime" && "🔍"}
+                  {combo.passion === "Napping" && "😴"}
+                </span>
               )}
             </div>
 
@@ -57,6 +77,27 @@ export default function MvpTestPage() {
             <h2 className="text-base font-heading font-bold uppercase tracking-wide text-ui-fg-base">
               {combo.title}
             </h2>
+
+            {/* Shirt text (design slogan) */}
+            {combo.shirtText && (
+              <p className="text-sm font-bold text-ui-fg-interactive italic">
+                &ldquo;{combo.shirtText}&rdquo;
+              </p>
+            )}
+
+            {/* SEO keyword badge */}
+            {combo.bestKeyword && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                  🔑 {combo.bestKeyword}
+                </span>
+                {combo.bestVolume ? (
+                  <span className="text-xs text-ui-fg-muted">
+                    {combo.bestVolume.toLocaleString()}/mo
+                  </span>
+                ) : null}
+              </div>
+            )}
 
             {/* Proof-of-concept string */}
             <p className="text-sm italic text-ui-fg-subtle">

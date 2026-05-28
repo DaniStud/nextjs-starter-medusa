@@ -193,9 +193,14 @@ export default async function shirtplatformOrderForwardingHandler({
 
     // -----------------------------------------------------------------------
     // 6. Commit the order to production
+    //    Set SHIRTPLATFORM_DRY_RUN=true to skip committing (test mode)
     // -----------------------------------------------------------------------
-    await shirtplatform.commitOrder(spOrderId)
-    logger.info(`[SP Order] Committed SP order ${spOrderId} to production`)
+    if (process.env.SHIRTPLATFORM_DRY_RUN === "true") {
+      logger.info(`[SP Order] DRY RUN — skipping commit for SP order ${spOrderId} (${itemsAdded} items added)`)
+    } else {
+      await shirtplatform.commitOrder(spOrderId)
+      logger.info(`[SP Order] Committed SP order ${spOrderId} to production`)
+    }
 
     // -----------------------------------------------------------------------
     // 7. Save the Shirtplatform order ID back to Medusa order metadata

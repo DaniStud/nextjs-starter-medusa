@@ -1,0 +1,21 @@
+{
+  "roles": [
+    { "id": "r1", "name": "Cat Mom" },
+    { "id": "r2", "name": "Dog Mom" },
+    { "id": "r3", "name": "Bird Mom" },
+    { "id": "r4", "name": "Crazy Cat Lady" },
+    { "id": "r5", "name": "Proud Dog Dad" }
+  ],
+  "passions": [
+    { "id": "p1", "name": "Wine", "iconMapKey": null },
+    { "id": "p2", "name": "Gardening", "iconMapKey": null },
+    { "id": "p3", "name": "Reading", "iconMapKey": null },
+    { "id": "p4", "name": "Coffee", "iconMapKey": null },
+    { "id": "p5", "name": "Yoga", "iconMapKey": null },
+    { "id": "p6", "name": "Knitting", "iconMapKey": null },
+    { "id": "p7", "name": "Hiking", "iconMapKey": null },
+    { "id": "p8", "name": "Cooking", "iconMapKey": null },
+    { "id": "p9", "name": "True Crime", "iconMapKey": null },
+    { "id": "p10", "name": "Napping", "iconMapKey": null }
+  ]
+}

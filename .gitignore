@@ -59,4 +59,8 @@ dump.rdb
 # medusa postgres data
 medusa-backend/postgres-data
 
+# generated design assets
+assets/text-designs/
+assets/product-previews/
+
 .env.dev-setup

@@ -13,7 +13,11 @@
     "start": "next start -p 8000",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
-    "generate:matrix": "node --env-file=.env.local scripts/generate-content.mjs"
+    "generate:matrix": "node --env-file=.env.local scripts/generate-content.mjs",
+    "discover:keywords": "node scripts/discover-keywords.mjs",
+    "validate:keywords": "node --env-file=.env.local scripts/validate-volume.mjs",
+    "render:designs": "node scripts/render-text-designs.mjs",
+    "create:products": "node --env-file=.env.local scripts/create-niche-products.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -54,6 +58,7 @@
     "eslint-config-next": "^15.5.9",
     "postcss": "^8.4.8",
     "prettier": "^3.0.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.0.23",
     "typescript": "^5.6.0",
     "webpack": "^5"
