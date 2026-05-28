@@ -577,6 +577,131 @@ class ShirtplatformModuleService {
     return { buffer: Buffer.from(arrayBuffer), contentType }
   }
 
+  /**
+   * Generate a high-quality composed preview (motive on shirt) using the
+   * throw-away order approach. This is the most reliable method:
+   *
+   *  1. Create a temporary order
+   *  2. Add a product with the design (motive sent inline as base64)
+   *  3. GET the rendered image (SP composites motive onto shirt photo)
+   *  4. Cancel the order so it's never fulfilled
+   *
+   * The motive is sent as `attachment` (base64) so SP doesn't need to fetch
+   * any external URL.
+   */
+  async generatePreviewViaOrder(
+    productId: number,
+    assignedColorId: number,
+    assignedSizeId: number,
+    viewPosition: string,
+    motiveBase64: string,
+    motiveFilename: string,
+    positionLeft?: string,
+    positionRight?: string,
+    positionTop?: string
+  ): Promise<{ buffer: Buffer; contentType: string }> {
+    const uniqueId = `preview-${productId}-${assignedColorId}-${Date.now()}`
+
+    // 1. Create throw-away order
+    const orderData = await this.request<any>(
+      `/accounts/${this.accountId}/shops/${this.shopId}/orders`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          productionOrder: {
+            uniqueId,
+            financialStatus: "PAID",
+            country: { id: 4742 },
+            orderShipping: { title: "Preview", carrier: { id: 872 } },
+            customer: {
+              firstName: "Preview",
+              lastName: "Bot",
+              email: "preview@internal.local",
+              shippingAddress: {
+                street: "N/A", streetNo: "1",
+                city: "Copenhagen", zip: "2200", countryCode: "DK",
+              },
+              billingAddress: {
+                street: "N/A", streetNo: "1",
+                city: "Copenhagen", zip: "2200", countryCode: "DK",
+              },
+            },
+          },
+        }),
+      }
+    )
+    const orderId =
+      orderData?.productionOrderExpanded?.id ?? orderData?.productionOrder?.id
+    if (!orderId) {
+      throw new Error("Failed to create throw-away order for preview")
+    }
+
+    try {
+      // 2. Add product with inline motive (base64 attachment)
+      const position: Record<string, string> =
+        positionLeft && positionRight
+          ? {
+              left: positionLeft,
+              right: positionRight,
+              ...(positionTop ? { top: positionTop } : {}),
+            }
+          : { horizontalCenter: "0", verticalCenter: "0" }
+
+      const designBody = {
+        creatorse_design: {
+          productId,
+          amount: 1,
+          assignedColor: { id: assignedColorId },
+          assignedSize: { id: assignedSizeId },
+          compositions: {
+            creatorse_composition: [
+              {
+                productArea: {
+                  assignedView: { view: { position: viewPosition } },
+                },
+                elements: [
+                  {
+                    creatorse_designElementMotive: {
+                      motive: {
+                        attachment: motiveBase64,
+                        filename: motiveFilename,
+                      },
+                      position,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }
+
+      const addData = await this.request<any>(
+        `/accounts/${this.accountId}/shops/${this.shopId}/orders/${orderId}/orderedProducts/usingCreatorSE`,
+        { method: "POST", body: JSON.stringify(designBody) }
+      )
+      const opId = addData?.orderedProduct?.id
+      if (!opId) {
+        throw new Error("Failed to add ordered product for preview")
+      }
+
+      // 3. Download the rendered image
+      return await this.requestBinary(
+        `/accounts/${this.accountId}/shops/${this.shopId}/orders/${orderId}/orderedProducts/${opId}/image`
+      )
+    } finally {
+      // 4. Always cancel the order
+      try {
+        await this.request(
+          `/accounts/${this.accountId}/shops/${this.shopId}/orders/${orderId}/cancelOrder`,
+          { method: "DELETE" }
+        )
+      } catch {
+        // Ignore cancel errors
+      }
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Order API
   // -------------------------------------------------------------------------

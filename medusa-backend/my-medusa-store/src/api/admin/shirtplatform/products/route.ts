@@ -282,32 +282,28 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         if (viewPosition === "BACK" || viewPosition === "BOTH") motiveViews.push("BACK")
       }
 
-      // Upload motive to Shirtplatform so their API can render composed previews
-      let spMotiveId: number | undefined
+      // Fetch the motive image as base64 for the throw-away order preview
+      let motiveBase64: string | undefined
+      const motiveFilename = motive?.filename ?? "design.png"
       if (hasMotive && motive!.url) {
         try {
-          spMotiveId = await shirtplatform.createSpMotive(
-            motive!.filename ?? title
-          )
-          // Fetch the motive image from our file store
           const motiveResp = await fetch(motive!.url!)
           if (motiveResp.ok) {
             const motiveBuffer = Buffer.from(await motiveResp.arrayBuffer())
-            await shirtplatform.uploadSpMotiveBitmap(
-              spMotiveId,
-              motiveBuffer,
-              motive!.filename ?? "design.png"
-            )
-            console.log(`[SP] Motive uploaded to Shirtplatform as motive ID ${spMotiveId}`)
+            motiveBase64 = motiveBuffer.toString("base64")
+            console.log(`[SP] Motive fetched for preview (${(motiveBase64.length / 1024).toFixed(0)}KB base64)`)
           } else {
             console.warn(`[SP] Could not fetch motive from ${motive!.url}: ${motiveResp.status}`)
-            spMotiveId = undefined
           }
         } catch (motiveErr: any) {
-          console.warn(`[SP] Failed to upload motive to Shirtplatform: ${motiveErr.message}`)
-          spMotiveId = undefined
+          console.warn(`[SP] Failed to fetch motive for preview: ${motiveErr.message}`)
         }
       }
+
+      // Pick a valid size ID for throw-away order previews (any size works)
+      const previewSizeId = detail.skuMatrix.find(
+        (s) => colorIds.includes(s.colorId) && sizeIds.includes(s.sizeId)
+      )?.sizeId ?? sizeIds[0]
 
       const productImages: { url: string; rank: number }[] = []
       let thumbnailUrl: string | null = null
@@ -327,21 +323,21 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           const isMotiveView = motiveViews.includes(vp)
           let uploaded = false
 
-          // Designed preview (motive on shirt) for motive views
-          if (hasMotive && isMotiveView) {
+          // Composed preview (motive on shirt) via throw-away order method
+          if (hasMotive && isMotiveView && motiveBase64) {
             try {
-              const preview = await shirtplatform.getDesignedProductPreview(
+              const preview = await shirtplatform.generatePreviewViaOrder(
                 spProductId,
                 colorId,
+                previewSizeId,
                 vp,
-                spMotiveId ? undefined : motive!.url,
-                spMotiveId,
+                motiveBase64,
+                motiveFilename,
                 motive!.position_left,
                 motive!.position_right,
                 motive!.position_top
               )
-              const ext = preview.contentType.includes("svg") ? "svg" : "png"
-              const filename = `sp-preview-${spProductId}-${colorId}-${vp.toLowerCase()}.${ext}`
+              const filename = `sp-preview-${spProductId}-${colorId}-${vp.toLowerCase()}.png`
               const created = await fileModule.createFiles([
                 {
                   filename,
@@ -358,9 +354,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
                   variantThumbnailByColor.set(colorId, file.url)
                 }
                 uploaded = true
+                console.log(`[SP] ✓ Composed preview for color ${colorId} ${vp}`)
               }
             } catch (previewErr: any) {
-              console.warn(`[SP] designedProducts/preview failed for color ${colorId} ${vp}: ${previewErr.message}`)
+              console.warn(`[SP] Throw-away order preview failed for color ${colorId} ${vp}: ${previewErr.message}`)
             }
           }
 
@@ -414,40 +411,17 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       }
 
       // Set per-variant thumbnails (each color gets its own front image)
-      // Also store SP motive ID in variant metadata for order fulfillment
       const createdVariants = product.variants ?? []
       for (const variant of createdVariants) {
         const variantColorId = variant.metadata?.shirtplatform_assigned_color_id
-        const updates: Record<string, any> = {}
         if (variantColorId && variantThumbnailByColor.has(Number(variantColorId))) {
-          updates.thumbnail = variantThumbnailByColor.get(Number(variantColorId))
-        }
-        if (spMotiveId) {
-          updates.metadata = {
-            ...variant.metadata,
-            shirtplatform_sp_motive_id: spMotiveId,
-          }
-        }
-        if (Object.keys(updates).length > 0) {
           try {
-            await productModule.updateProductVariants(variant.id, updates)
+            await productModule.updateProductVariants(variant.id, {
+              thumbnail: variantThumbnailByColor.get(Number(variantColorId)),
+            })
           } catch (varErr: any) {
             console.warn(`[SP] Failed to update variant ${variant.id}: ${varErr.message}`)
           }
-        }
-      }
-
-      // Store SP motive ID on the product too
-      if (spMotiveId) {
-        try {
-          await productModule.updateProducts(product.id, {
-            metadata: {
-              ...product.metadata,
-              shirtplatform_sp_motive_id: spMotiveId,
-            },
-          })
-        } catch (metaErr: any) {
-          console.warn(`[SP] Failed to store SP motive ID on product: ${metaErr.message}`)
         }
       }
     } catch (imgErr: any) {
