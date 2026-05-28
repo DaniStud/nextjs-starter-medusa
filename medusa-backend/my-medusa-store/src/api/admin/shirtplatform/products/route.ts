@@ -282,6 +282,33 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         if (viewPosition === "BACK" || viewPosition === "BOTH") motiveViews.push("BACK")
       }
 
+      // Upload motive to Shirtplatform so their API can render composed previews
+      let spMotiveId: number | undefined
+      if (hasMotive && motive!.url) {
+        try {
+          spMotiveId = await shirtplatform.createSpMotive(
+            motive!.filename ?? title
+          )
+          // Fetch the motive image from our file store
+          const motiveResp = await fetch(motive!.url!)
+          if (motiveResp.ok) {
+            const motiveBuffer = Buffer.from(await motiveResp.arrayBuffer())
+            await shirtplatform.uploadSpMotiveBitmap(
+              spMotiveId,
+              motiveBuffer,
+              motive!.filename ?? "design.png"
+            )
+            console.log(`[SP] Motive uploaded to Shirtplatform as motive ID ${spMotiveId}`)
+          } else {
+            console.warn(`[SP] Could not fetch motive from ${motive!.url}: ${motiveResp.status}`)
+            spMotiveId = undefined
+          }
+        } catch (motiveErr: any) {
+          console.warn(`[SP] Failed to upload motive to Shirtplatform: ${motiveErr.message}`)
+          spMotiveId = undefined
+        }
+      }
+
       const productImages: { url: string; rank: number }[] = []
       let thumbnailUrl: string | null = null
       // Map: colorId → front image URL (used as variant thumbnail)
@@ -307,8 +334,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
                 spProductId,
                 colorId,
                 vp,
-                motive!.url,
-                undefined,
+                spMotiveId ? undefined : motive!.url,
+                spMotiveId,
                 motive!.position_left,
                 motive!.position_right,
                 motive!.position_top
@@ -387,17 +414,40 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       }
 
       // Set per-variant thumbnails (each color gets its own front image)
+      // Also store SP motive ID in variant metadata for order fulfillment
       const createdVariants = product.variants ?? []
       for (const variant of createdVariants) {
         const variantColorId = variant.metadata?.shirtplatform_assigned_color_id
+        const updates: Record<string, any> = {}
         if (variantColorId && variantThumbnailByColor.has(Number(variantColorId))) {
-          try {
-            await productModule.updateProductVariants(variant.id, {
-              thumbnail: variantThumbnailByColor.get(Number(variantColorId)),
-            })
-          } catch (varErr: any) {
-            console.warn(`[SP] Failed to set variant thumbnail for ${variant.id}: ${varErr.message}`)
+          updates.thumbnail = variantThumbnailByColor.get(Number(variantColorId))
+        }
+        if (spMotiveId) {
+          updates.metadata = {
+            ...variant.metadata,
+            shirtplatform_sp_motive_id: spMotiveId,
           }
+        }
+        if (Object.keys(updates).length > 0) {
+          try {
+            await productModule.updateProductVariants(variant.id, updates)
+          } catch (varErr: any) {
+            console.warn(`[SP] Failed to update variant ${variant.id}: ${varErr.message}`)
+          }
+        }
+      }
+
+      // Store SP motive ID on the product too
+      if (spMotiveId) {
+        try {
+          await productModule.updateProducts(product.id, {
+            metadata: {
+              ...product.metadata,
+              shirtplatform_sp_motive_id: spMotiveId,
+            },
+          })
+        } catch (metaErr: any) {
+          console.warn(`[SP] Failed to store SP motive ID on product: ${metaErr.message}`)
         }
       }
     } catch (imgErr: any) {

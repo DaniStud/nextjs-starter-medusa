@@ -436,6 +436,73 @@ class ShirtplatformModuleService {
     )
   }
 
+  // -------------------------------------------------------------------------
+  // Motive API — upload designs to Shirtplatform
+  //
+  // Step 1: POST .../motives  → create motive record → returns motive ID
+  // Step 2: POST .../motives/{id}/bitmap  → upload image file
+  // -------------------------------------------------------------------------
+
+  /**
+   * Create a motive record on Shirtplatform and return its ID.
+   */
+  async createSpMotive(name: string): Promise<number> {
+    const data = await this.request<any>(
+      `/accounts/${this.accountId}/shops/${this.shopId}/motives`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          motive: {
+            name,
+            type: "HIGH_RESOLUTION_BITMAP",
+          },
+        }),
+      }
+    )
+    const motive = data?.motive ?? data
+    if (!motive?.id) {
+      throw new Error("Shirtplatform did not return a motive ID")
+    }
+    return motive.id
+  }
+
+  /**
+   * Upload a bitmap image to an existing Shirtplatform motive.
+   * Uses multipart/form-data as required by the SP API.
+   */
+  async uploadSpMotiveBitmap(
+    motiveId: number,
+    imageBuffer: Buffer,
+    filename: string
+  ): Promise<void> {
+    const token = await this.getToken()
+
+    const formData = new FormData()
+    const ab = imageBuffer.buffer.slice(
+      imageBuffer.byteOffset,
+      imageBuffer.byteOffset + imageBuffer.byteLength
+    ) as ArrayBuffer
+    formData.append("file", new Blob([ab]), filename)
+
+    const response = await fetch(
+      `${this.apiUrl}/accounts/${this.accountId}/shops/${this.shopId}/motives/${motiveId}/bitmap`,
+      {
+        method: "POST",
+        headers: {
+          "x-auth-token": token,
+        },
+        body: formData,
+      }
+    )
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "")
+      throw new Error(
+        `Shirtplatform motive bitmap upload failed (${response.status}): ${errText}`
+      )
+    }
+  }
+
   /**
    * Fetch the SVG preview of a designed product (motive placed on shirt).
    * POST .../designedProducts/preview with a CreatorSE-like body.
