@@ -130,6 +130,12 @@ const NewShirtplatformProductPage = () => {
   const [submitting, setSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+  // composed preview modal
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewImages, setPreviewImages] = useState<{ view: string; dataUrl: string }[]>([])
+  const [previewColorId, setPreviewColorId] = useState<number | null>(null)
+
   // ---------- step 1: load summaries on mount ----------
   useEffect(() => {
     let cancelled = false
@@ -316,6 +322,59 @@ const NewShirtplatformProductPage = () => {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // ---------- composed preview ----------
+  const openComposedPreview = async () => {
+    if (!detail || !motive?.url || skipMotive) return
+    const colorId = previewColorId ?? [...selectedColorIds][0]
+    if (!colorId) return
+
+    // Pick a valid size from the SKU matrix
+    const skuEntry = detail.skuMatrix.find(
+      (s) => s.colorId === colorId && selectedSizeIds.has(s.sizeId)
+    ) ?? detail.skuMatrix.find((s) => selectedSizeIds.has(s.sizeId))
+    if (!skuEntry) {
+      toast.error("No valid size found for preview")
+      return
+    }
+
+    const views: string[] = []
+    if (viewPosition === "FRONT" || viewPosition === "BOTH") views.push("FRONT")
+    if (viewPosition === "BACK" || viewPosition === "BOTH") views.push("BACK")
+    if (views.length === 0) views.push(viewPosition)
+
+    setPreviewOpen(true)
+    setPreviewLoading(true)
+    setPreviewImages([])
+
+    const results: { view: string; dataUrl: string }[] = []
+    for (const vp of views) {
+      try {
+        const data = await apiJson<{ image_data_url: string }>(
+          "/admin/shirtplatform/composed-preview",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              sp_product_id: detail.id,
+              color_id: colorId,
+              size_id: skuEntry.sizeId,
+              view_position: vp,
+              motive_url: motive.url,
+              motive_filename: motive.filename,
+              position_top: positionTop || undefined,
+              position_left: positionLeft || undefined,
+              position_right: positionRight || undefined,
+            }),
+          }
+        )
+        results.push({ view: vp, dataUrl: data.image_data_url })
+      } catch (err: any) {
+        toast.error(`Preview failed (${vp}): ${err.message}`)
+      }
+    }
+    setPreviewImages(results)
+    setPreviewLoading(false)
   }
 
   // ---------- navigation guards ----------
@@ -799,11 +858,112 @@ const NewShirtplatformProductPage = () => {
             Next
           </Button>
         ) : (
-          <Button onClick={submit} disabled={submitting}>
-            {submitting ? "Creating…" : "Create product"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {!skipMotive && motive?.url && (
+              <Button
+                variant="secondary"
+                onClick={openComposedPreview}
+                disabled={submitting || previewLoading}
+              >
+                {previewLoading ? "Generating…" : "Preview design"}
+              </Button>
+            )}
+            <Button onClick={submit} disabled={submitting}>
+              {submitting ? "Creating…" : "Create product"}
+            </Button>
+          </div>
         )}
       </div>
+
+      {/* --- Composed preview modal ------------------------------------ */}
+      {previewOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => !previewLoading && setPreviewOpen(false)}
+        >
+          <div
+            className="bg-ui-bg-base rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <Heading level="h2">Design preview</Heading>
+              <div className="flex items-center gap-3">
+                {selectedColorIds.size > 1 && (
+                  <Select
+                    value={String(previewColorId ?? [...selectedColorIds][0])}
+                    onValueChange={(v) => {
+                      setPreviewColorId(Number(v))
+                    }}
+                  >
+                    <Select.Trigger className="min-w-[120px]">
+                      <Select.Value placeholder="Color" />
+                    </Select.Trigger>
+                    <Select.Content>
+                      {[...selectedColorIds].map((cid) => {
+                        const c = detail?.colors.find((x) => x.id === cid)
+                        return (
+                          <Select.Item key={cid} value={String(cid)}>
+                            {c?.name ?? `#${cid}`}
+                          </Select.Item>
+                        )
+                      })}
+                    </Select.Content>
+                  </Select>
+                )}
+                {selectedColorIds.size > 1 && (
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={openComposedPreview}
+                    disabled={previewLoading}
+                  >
+                    Refresh
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => setPreviewOpen(false)}
+                  disabled={previewLoading}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+            <div className="p-6">
+              {previewLoading && (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <div className="w-8 h-8 border-2 border-ui-border-base border-t-ui-fg-base rounded-full animate-spin" />
+                  <Text className="text-ui-fg-subtle">
+                    Generating composed preview… this may take a few seconds.
+                  </Text>
+                </div>
+              )}
+              {!previewLoading && previewImages.length === 0 && (
+                <Text className="text-ui-fg-subtle text-center py-8">
+                  No preview images were generated. Check your motive and position settings.
+                </Text>
+              )}
+              {!previewLoading && previewImages.length > 0 && (
+                <div className="flex gap-6 justify-center flex-wrap">
+                  {previewImages.map((img) => (
+                    <div key={img.view} className="text-center">
+                      <Text size="small" className="text-ui-fg-subtle mb-2 font-medium">
+                        {img.view}
+                      </Text>
+                      <img
+                        src={img.dataUrl}
+                        alt={`${img.view} preview`}
+                        className="max-h-[60vh] rounded border bg-ui-bg-subtle"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Container>
   )
 }
