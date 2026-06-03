@@ -107,7 +107,7 @@ const StripePaymentButton = ({
     const countryCode = cart.shipping_address?.country_code || "dk"
     const baseUrl =
       process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8000"
-    const returnUrl = `${baseUrl}/${countryCode}/checkout?payment_intent_client_secret=${session.data.client_secret}&cart_id=${cart.id}`
+    const returnUrl = `${baseUrl}/${countryCode}/checkout?cart_id=${cart.id}`
 
     console.log("[PaymentButton] returnUrl:", returnUrl)
 

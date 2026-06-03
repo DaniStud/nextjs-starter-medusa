@@ -5,7 +5,7 @@ import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import StripeReturnHandler from "@modules/checkout/components/stripe-return-handler"
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { t } from "@lib/i18n"
 
 export const metadata: Metadata = {
@@ -31,7 +31,6 @@ export default async function Checkout({
 
   if (!cart) {
     if (paymentIntentClientSecret) {
-      const { redirect } = await import("next/navigation")
       redirect("/")
     }
     return notFound()
