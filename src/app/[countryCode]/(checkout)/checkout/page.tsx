@@ -18,9 +18,12 @@ export default async function Checkout({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const params = await searchParams
+  const rawSecret = params.payment_intent_client_secret
   const paymentIntentClientSecret =
-    (params.payment_intent_client_secret as string) || null
-  const cartIdFromUrl = (params.cart_id as string) || undefined
+    (Array.isArray(rawSecret) ? rawSecret[0] : rawSecret) || null
+  const rawCartId = params.cart_id
+  const cartIdFromUrl =
+    (Array.isArray(rawCartId) ? rawCartId[0] : rawCartId) || undefined
 
   // Try cookie first, fall back to cart_id from URL (for redirect-based payments
   // where the cookie may be missing due to sameSite policy)
