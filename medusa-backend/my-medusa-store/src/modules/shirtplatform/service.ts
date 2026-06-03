@@ -856,12 +856,19 @@ class ShirtplatformModuleService {
   // Webhook API
   // -------------------------------------------------------------------------
 
-  async registerWebhook(url: string, topic: string): Promise<ShirtplatformWebhookPayload> {
+  async registerWebhook(
+    address: string,
+    topic: string,
+    secret?: string
+  ): Promise<ShirtplatformWebhookPayload> {
+    const webhook: Record<string, string> = { address, topic, mediaType: "JSON" }
+    if (secret) webhook.secret = secret
+
     return this.request<ShirtplatformWebhookPayload>(
       `/accounts/${this.accountId}/shops/${this.shopId}/webhooks`,
       {
         method: "POST",
-        body: JSON.stringify({ url, topic }),
+        body: JSON.stringify({ webhook }),
       }
     )
   }

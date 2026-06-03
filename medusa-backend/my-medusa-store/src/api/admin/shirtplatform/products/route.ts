@@ -311,12 +311,6 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       const variantThumbnailByColor = new Map<number, string>()
       let imageRank = 0
 
-      // Add the raw motive image to the product gallery (so the design is
-      // visible on the product page even if the composed preview fails)
-      if (hasMotive && motive!.url) {
-        productImages.push({ url: motive!.url, rank: imageRank++ })
-      }
-
       // Fetch preview for each color
       for (const colorId of colorIds) {
         for (const vp of viewsToFetch) {
