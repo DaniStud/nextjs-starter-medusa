@@ -11,8 +11,10 @@ const POLL_INTERVAL_MS = 3000
 
 const StripeReturnHandler = ({
   clientSecret,
+  cartId,
 }: {
   clientSecret: string
+  cartId?: string
 }) => {
   const stripe = useStripe()
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -38,7 +40,7 @@ const StripeReturnHandler = ({
         case "succeeded":
         case "requires_capture":
           try {
-            await placeOrder()
+            await placeOrder(cartId)
             setStatus("success")
           } catch (err: any) {
             setStatus("error")
