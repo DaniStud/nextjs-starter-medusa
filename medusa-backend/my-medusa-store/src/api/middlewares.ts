@@ -30,5 +30,10 @@ export default defineMiddlewares({
       matcher: "/store/shirtplatform-webhook",
       middlewares: [captureRawBody],
     },
+    {
+      // Increase body size limit for base64 motive uploads (~18 MB binary → ~25 MB base64)
+      matcher: "/admin/shirtplatform/motives",
+      bodyParser: { sizeLimit: "30mb" },
+    },
   ],
 })
