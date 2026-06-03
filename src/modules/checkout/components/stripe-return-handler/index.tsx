@@ -6,6 +6,9 @@ import { t } from "@lib/i18n"
 import { useStripe } from "@stripe/react-stripe-js"
 import { useEffect, useRef, useState } from "react"
 
+const MAX_POLL_ATTEMPTS = 20
+const POLL_INTERVAL_MS = 3000
+
 const StripeReturnHandler = ({
   clientSecret,
 }: {
@@ -22,7 +25,9 @@ const StripeReturnHandler = ({
     if (!stripe || !clientSecret || handled.current) return
     handled.current = true
 
-    stripe.retrievePaymentIntent(clientSecret).then(async ({ paymentIntent }) => {
+    const checkAndComplete = async (attempt = 0): Promise<void> => {
+      const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret)
+
       if (!paymentIntent) {
         setStatus("error")
         setErrorMessage(t("stripe.noStatus"))
@@ -41,7 +46,14 @@ const StripeReturnHandler = ({
           }
           break
         case "processing":
-          setStatus("loading")
+          if (attempt < MAX_POLL_ATTEMPTS) {
+            await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+            return checkAndComplete(attempt + 1)
+          }
+          setStatus("error")
+          setErrorMessage(
+            t("stripe.notSuccessful", { status: paymentIntent.status })
+          )
           break
         default:
           setStatus("error")
@@ -49,7 +61,9 @@ const StripeReturnHandler = ({
             t("stripe.notSuccessful", { status: paymentIntent.status })
           )
       }
-    })
+    }
+
+    checkAndComplete()
   }, [stripe, clientSecret])
 
   if (status === "loading") {

@@ -17,16 +17,24 @@ export default async function Checkout({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  const params = await searchParams
+  const paymentIntentClientSecret =
+    (params.payment_intent_client_secret as string) || null
+
   const cart = await retrieveCart()
 
   if (!cart) {
+    // If returning from a redirect-based payment (MobilePay, etc.) but the
+    // cart is already gone, the order was likely completed via webhook.
+    // Redirect to the home page instead of showing a 404.
+    if (paymentIntentClientSecret) {
+      const { redirect } = await import("next/navigation")
+      redirect("/")
+    }
     return notFound()
   }
 
   const customer = await retrieveCustomer()
-  const params = await searchParams
-  const paymentIntentClientSecret =
-    (params.payment_intent_client_secret as string) || null
 
   return (
     <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-y-8 small:gap-x-12 py-12">
