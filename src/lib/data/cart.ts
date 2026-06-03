@@ -407,7 +407,11 @@ export async function placeOrder(cartId?: string) {
       revalidateTag(cartCacheTag)
       return cartRes
     })
-    .catch(medusaError)
+    .catch((err: any) => {
+      // Re-throw with the actual error message so the client can see it
+      const msg = err?.response?.data?.message || err?.message || String(err)
+      throw new Error(`Order failed: ${msg}`)
+    })
 
   if (cartRes?.type === "order") {
     const countryCode =
