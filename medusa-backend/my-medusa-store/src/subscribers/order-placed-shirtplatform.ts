@@ -28,21 +28,26 @@ export default async function shirtplatformOrderForwardingHandler({
   logger.info(`[SP Order] Forwarding Medusa order ${orderId} to Shirtplatform`)
 
   try {
-    const orderModule = container.resolve(Modules.ORDER) as any
     const shirtplatform = container.resolve<ShirtplatformModuleService>(SHIRTPLATFORM_MODULE)
+    const query = container.resolve("query") as any
+    const orderModule = container.resolve(Modules.ORDER) as any
 
     // -----------------------------------------------------------------------
-    // 1. Retrieve Medusa order
+    // 1. Retrieve Medusa order via Query (remote query supports linked data)
     // -----------------------------------------------------------------------
-    const order = await orderModule.retrieveOrder(orderId, {
-      relations: [
-        "items",
-        "items.variant",
-        "items.variant.product",
-        "shipping_address",
-        "billing_address",
-        "customer",
+    const { data: [order] } = await query.graph({
+      entity: "order",
+      fields: [
+        "id",
+        "email",
+        "metadata",
+        "items.*",
+        "items.variant.*",
+        "items.variant.metadata",
+        "shipping_address.*",
+        "billing_address.*",
       ],
+      filters: { id: orderId },
     })
 
     if (!order) {
@@ -215,16 +220,13 @@ export default async function shirtplatformOrderForwardingHandler({
     // -----------------------------------------------------------------------
     // 7. Save the Shirtplatform order ID back to Medusa order metadata
     // -----------------------------------------------------------------------
-    await orderModule.updateOrders([
-      {
-        id: orderId,
-        metadata: {
-          ...(order.metadata ?? {}),
-          shirtplatform_order_id: spOrderId,
-          shirtplatform_order_synced_at: new Date().toISOString(),
-        },
+    await orderModule.updateOrders(orderId, {
+      metadata: {
+        ...(order.metadata ?? {}),
+        shirtplatform_order_id: spOrderId,
+        shirtplatform_order_synced_at: new Date().toISOString(),
       },
-    ])
+    })
 
     logger.info(`[SP Order] ✅ Order ${orderId} successfully forwarded as SP order ${spOrderId}`)
   } catch (err: any) {
@@ -234,17 +236,12 @@ export default async function shirtplatformOrderForwardingHandler({
 
     try {
       const orderModule = container.resolve(Modules.ORDER) as any
-      const current = await orderModule.retrieveOrder(orderId).catch(() => null)
-      await orderModule.updateOrders([
-        {
-          id: orderId,
-          metadata: {
-            ...(current?.metadata ?? {}),
-            shirtplatform_error: String(err?.message ?? err),
-            shirtplatform_error_at: new Date().toISOString(),
-          },
+      await orderModule.updateOrders(orderId, {
+        metadata: {
+          shirtplatform_error: String(err?.message ?? err),
+          shirtplatform_error_at: new Date().toISOString(),
         },
-      ])
+      })
     } catch (metaErr: any) {
       logger.error(
         `[SP Order] Additionally failed to record SP error on order ${orderId}: ${metaErr.message}`
