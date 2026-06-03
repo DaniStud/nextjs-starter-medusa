@@ -249,8 +249,8 @@ const NewShirtplatformProductPage = () => {
   // ---------- step 4: submit ----------
   const submit = async () => {
     if (!detail) return
-    const amountMinor = Math.round(Number(priceMajor) * 100)
-    if (!Number.isFinite(amountMinor) || amountMinor <= 0) {
+    const priceAmount = Number(priceMajor)
+    if (!Number.isFinite(priceAmount) || priceAmount <= 0) {
       toast.error("Enter a valid price")
       return
     }
@@ -275,7 +275,7 @@ const NewShirtplatformProductPage = () => {
           description: description.trim() || undefined,
           status,
         },
-        prices: [{ amount: amountMinor, currency_code: currency }],
+        prices: [{ amount: priceAmount, currency_code: currency }],
       }
       if (!skipMotive && motive) {
         body.motive = {
