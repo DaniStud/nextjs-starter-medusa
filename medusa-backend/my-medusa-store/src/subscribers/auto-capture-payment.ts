@@ -17,19 +17,21 @@ export default async function autoCapturePaymentHandler({ event, container }: an
   try {
     logger.info(`[Auto-Capture] Order ${orderId} created, capturing authorized payments`)
 
-    // Resolve order → payment_collection via Query (remote link)
+    // Resolve order → payment_collections via Query (remote link)
     const { data: [order] } = await query.graph({
       entity: "order",
-      fields: ["id", "payment_collection.id"],
+      fields: ["id", "payment_collections.id"],
       filters: { id: orderId },
     })
 
-    if (!order?.payment_collection?.id) {
+    const paymentCollection = order?.payment_collections?.[0]
+
+    if (!paymentCollection?.id) {
       logger.warn(`[Auto-Capture] No payment collection found for order ${orderId}`)
       return
     }
 
-    const paymentCollectionId = order.payment_collection.id
+    const paymentCollectionId = paymentCollection.id
 
     // List only payments belonging to this order's payment collection
     const payments = await paymentModule.listPayments({

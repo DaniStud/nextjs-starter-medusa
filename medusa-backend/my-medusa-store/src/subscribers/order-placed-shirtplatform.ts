@@ -221,15 +221,16 @@ export default async function shirtplatformOrderForwardingHandler({
     try {
       const { data: [orderWithPayment] } = await query.graph({
         entity: "order",
-        fields: ["id", "payment_collection.id"],
+        fields: ["id", "payment_collections.id"],
         filters: { id: orderId },
       })
 
-      captureDebug += `pc=${orderWithPayment?.payment_collection?.id ?? "none"};`
+      const paymentCollection = orderWithPayment?.payment_collections?.[0]
+      captureDebug += `pc=${paymentCollection?.id ?? "none"};`
 
-      if (orderWithPayment?.payment_collection?.id) {
+      if (paymentCollection?.id) {
         const payments = await paymentModule.listPayments({
-          payment_collection_id: orderWithPayment.payment_collection.id,
+          payment_collection_id: paymentCollection.id,
         })
 
         captureDebug += `payments=${payments.length};`
