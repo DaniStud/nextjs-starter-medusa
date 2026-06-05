@@ -216,6 +216,7 @@ export default async function shirtplatformOrderForwardingHandler({
     // -----------------------------------------------------------------------
     const paymentModule = container.resolve(Modules.PAYMENT) as any
     let paymentCaptured = false
+    let captureDebug = ""
 
     try {
       const { data: [orderWithPayment] } = await query.graph({
@@ -224,12 +225,17 @@ export default async function shirtplatformOrderForwardingHandler({
         filters: { id: orderId },
       })
 
+      captureDebug += `pc=${orderWithPayment?.payment_collection?.id ?? "none"};`
+
       if (orderWithPayment?.payment_collection?.id) {
         const payments = await paymentModule.listPayments({
           payment_collection_id: orderWithPayment.payment_collection.id,
         })
 
+        captureDebug += `payments=${payments.length};`
+
         for (const payment of payments) {
+          captureDebug += `p=${payment.id},status=${payment.status},captured=${!!payment.captured_at},provider=${payment.provider_id},amt=${payment.amount};`
           if (payment.captured_at) {
             paymentCaptured = true
             continue
@@ -240,13 +246,16 @@ export default async function shirtplatformOrderForwardingHandler({
               amount: payment.amount,
             })
             paymentCaptured = true
+            captureDebug += "capture=ok;"
             logger.info(`[SP Order] Captured payment ${payment.id} (${payment.amount})`)
           } catch (captureErr: any) {
+            captureDebug += `capture_err=${captureErr.message};`
             logger.error(`[SP Order] Failed to capture payment ${payment.id}: ${captureErr.message}`)
           }
         }
       }
     } catch (payErr: any) {
+      captureDebug += `outer_err=${payErr.message};`
       logger.error(`[SP Order] Error during payment capture: ${payErr.message}`)
     }
 
@@ -266,6 +275,8 @@ export default async function shirtplatformOrderForwardingHandler({
         ...(order.metadata ?? {}),
         shirtplatform_order_id: spOrderId,
         shirtplatform_order_synced_at: new Date().toISOString(),
+        shirtplatform_financial_status: financialStatus,
+        shirtplatform_capture_debug: captureDebug,
       },
     })
 
