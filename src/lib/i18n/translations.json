@@ -1,6 +1,8 @@
 {
   "en": {
     "nav.brand": "10SHRTS",
+    "nav.store": "Store",
+    "nav.about": "About",
     "nav.cart": "Cart ({{count}})",
     "nav.menu": "Menu",
 
@@ -298,6 +300,8 @@
     "quickAdd.addToCart": "Add to cart",
     "quickAdd.selectSize": "Select size",
     "quickAdd.adding": "Adding...",
+    "about.heading": "About 10SHRTS",
+    "about.body": "10SHRTS is your premium destination for high-quality essentials. Curated for everyday style and longevity.",
     "quickAdd.outOfStock": "Out of stock",
 
     "shipping.unlocked": "Free Shipping unlocked!",
@@ -386,6 +390,8 @@
   },
   "da": {
     "nav.brand": "10SHRTS",
+    "nav.store": "Butik",
+    "nav.about": "Om os",
     "nav.cart": "Kurv ({{count}})",
     "nav.menu": "Menu",
 
@@ -683,6 +689,8 @@
     "quickAdd.addToCart": "Læg i kurv",
     "quickAdd.selectSize": "Vælg størrelse",
     "quickAdd.adding": "Tilføjer...",
+    "about.heading": "Om 10SHRTS",
+    "about.body": "10SHRTS er din premium destination for essentials af høj kvalitet. Udvalgt til hverdagens stil og lang holdbarhed.",
     "quickAdd.outOfStock": "Udsolgt",
 
     "shipping.unlocked": "Gratis fragt aktiveret!",
