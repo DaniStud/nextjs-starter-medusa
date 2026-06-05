@@ -282,7 +282,15 @@ class ShirtplatformModuleService {
       throw new Error(`Shirtplatform API error (${response.status}): ${errorText}`)
     }
 
-    return response.json() as Promise<T>
+    // Some SP endpoints return empty bodies (e.g. commitOrder, cancelOrder)
+    const text = await response.text()
+    if (!text) return undefined as T
+
+    try {
+      return JSON.parse(text) as T
+    } catch {
+      return text as unknown as T
+    }
   }
 
   /**
