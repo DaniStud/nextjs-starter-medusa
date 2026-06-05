@@ -47,6 +47,7 @@ export default async function autoCapturePaymentHandler({ event, container }: an
 
         await paymentModule.capturePayment({
           payment_id: payment.id,
+          amount: payment.amount,
         })
 
         capturedCount++

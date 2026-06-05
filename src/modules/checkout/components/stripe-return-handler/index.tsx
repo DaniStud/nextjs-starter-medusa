@@ -41,8 +41,15 @@ const StripeReturnHandler = ({
         case "requires_capture":
           try {
             await placeOrder(cartId)
+            // placeOrder calls redirect() on success, which throws NEXT_REDIRECT.
+            // If we reach here, something unexpected happened.
             setStatus("success")
           } catch (err: any) {
+            // Next.js redirect() throws an error with digest containing "NEXT_REDIRECT".
+            // Re-throw it so the redirect actually happens.
+            if (err?.digest?.includes("NEXT_REDIRECT")) {
+              throw err
+            }
             setStatus("error")
             setErrorMessage(err.message || t("stripe.failedOrder"))
           }

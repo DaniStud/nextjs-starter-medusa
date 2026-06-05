@@ -212,13 +212,54 @@ export default async function shirtplatformOrderForwardingHandler({
     }
 
     // -----------------------------------------------------------------------
-    // 6. Commit the order to production
+    // 6. Capture the Stripe payment before committing to SP
     // -----------------------------------------------------------------------
-    await shirtplatform.commitOrder(spOrderId)
-    logger.info(`[SP Order] Committed SP order ${spOrderId} to production`)
+    const paymentModule = container.resolve(Modules.PAYMENT) as any
+    let paymentCaptured = false
+
+    try {
+      const { data: [orderWithPayment] } = await query.graph({
+        entity: "order",
+        fields: ["id", "payment_collection.id"],
+        filters: { id: orderId },
+      })
+
+      if (orderWithPayment?.payment_collection?.id) {
+        const payments = await paymentModule.listPayments({
+          payment_collection_id: orderWithPayment.payment_collection.id,
+        })
+
+        for (const payment of payments) {
+          if (payment.captured_at) {
+            paymentCaptured = true
+            continue
+          }
+          try {
+            await paymentModule.capturePayment({
+              payment_id: payment.id,
+              amount: payment.amount,
+            })
+            paymentCaptured = true
+            logger.info(`[SP Order] Captured payment ${payment.id} (${payment.amount})`)
+          } catch (captureErr: any) {
+            logger.error(`[SP Order] Failed to capture payment ${payment.id}: ${captureErr.message}`)
+          }
+        }
+      }
+    } catch (payErr: any) {
+      logger.error(`[SP Order] Error during payment capture: ${payErr.message}`)
+    }
+
+    const financialStatus = paymentCaptured ? "PAID" : "PENDING"
 
     // -----------------------------------------------------------------------
-    // 7. Save the Shirtplatform order ID back to Medusa order metadata
+    // 7. Commit the order to production
+    // -----------------------------------------------------------------------
+    await shirtplatform.commitOrder(spOrderId, financialStatus)
+    logger.info(`[SP Order] Committed SP order ${spOrderId} to production (financialStatus: ${financialStatus})`)
+
+    // -----------------------------------------------------------------------
+    // 8. Save the Shirtplatform order ID back to Medusa order metadata
     // -----------------------------------------------------------------------
     await orderModule.updateOrders(orderId, {
       metadata: {
