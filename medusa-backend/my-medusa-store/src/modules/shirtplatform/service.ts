@@ -847,12 +847,10 @@ class ShirtplatformModuleService {
   }
 
   async commitOrder(orderId: number, financialStatus = "PAID"): Promise<any> {
+    const qs = financialStatus ? `?financialStatus=${financialStatus}` : ""
     return this.request(
-      `/accounts/${this.accountId}/shops/${this.shopId}/orders/${orderId}/commitOrder`,
-      {
-        method: "PUT",
-        body: JSON.stringify({ financialStatus }),
-      }
+      `/accounts/${this.accountId}/shops/${this.shopId}/orders/${orderId}/commitOrder${qs}`,
+      { method: "PUT" }
     )
   }
 
