@@ -4,17 +4,18 @@ import { SHIRTPLATFORM_MODULE } from "../modules/shirtplatform"
 import ShirtplatformModuleService from "../modules/shirtplatform/service"
 
 /**
- * Forwards a placed Medusa order to Shirtplatform for print-on-demand fulfillment.
+ * Forwards a placed Medusa order to Shirtplatform for print-on-demand fulfillment
+ * using the **single-call deferred CreatorSE endpoint** (preferred method).
  *
  * Flow:
- *   1. Retrieve the Medusa order with all required relations
- *   2. Match the shipping country to a Shirtplatform country ID
- *   3. Create a base order on Shirtplatform
- *   4. Add each line item:
- *      - If variant metadata has `shirtplatform_motive_id` → use CreatorSE (dynamic design)
- *      - Otherwise → use usingBaseProduct (pre-designed products)
- *   5. Commit the order to production
- *   6. Store the Shirtplatform order ID in Medusa order metadata
+ *  1. Retrieve the Medusa order with all required relations
+ *  2. Build all designs from line items (motive URL/ID/attachment → CreatorSE)
+ *  3. Capture Stripe payment
+ *  4. POST /orders/usingCreatorSE — one call creates + commits the order
+ *  5. Store the Shirtplatform order ID in Medusa order metadata
+ *
+ * This replaces the deprecated 3-step:
+ *  POST /orders → POST /orderedProducts/usingCreatorSE → PUT /commitOrder
  *
  * Errors are logged but never re-thrown — the Medusa order flow must not be blocked.
  */
@@ -25,7 +26,7 @@ export default async function shirtplatformOrderForwardingHandler({
   const logger = container.resolve("logger") as any
   const orderId: string = data.id
 
-  logger.info(`[SP Order] Forwarding Medusa order ${orderId} to Shirtplatform`)
+  logger.info(`[SP Order] Forwarding Medusa order ${orderId} to Shirtplatform (deferred CreatorSE)`)
 
   try {
     const shirtplatform = container.resolve<ShirtplatformModuleService>(SHIRTPLATFORM_MODULE)
@@ -56,7 +57,6 @@ export default async function shirtplatformOrderForwardingHandler({
     }
 
     // Idempotency guard — if this order was already forwarded, skip.
-    // Re-runs happen on subscriber retries, manual replays, and webhook duplicates.
     if (order.metadata?.shirtplatform_order_id) {
       logger.info(
         `[SP Order] Order ${orderId} already forwarded as SP order ${order.metadata.shirtplatform_order_id} — skipping`
@@ -65,25 +65,7 @@ export default async function shirtplatformOrderForwardingHandler({
     }
 
     // -----------------------------------------------------------------------
-    // 2. Resolve Shirtplatform country ID from customer shipping address
-    // -----------------------------------------------------------------------
-    const shippingCountryCode = order.shipping_address?.country_code?.toUpperCase()
-    let shirtplatformCountryId: number | undefined
-
-    if (shippingCountryCode) {
-      try {
-        const countries = await shirtplatform.getCountries()
-        const match = countries.find(
-          (c) => c.code?.toUpperCase() === shippingCountryCode
-        )
-        shirtplatformCountryId = match?.id
-      } catch (err: any) {
-        logger.warn(`[SP Order] Could not fetch countries: ${err.message}. Proceeding without country.`)
-      }
-    }
-
-    // -----------------------------------------------------------------------
-    // 3. Build customer and address payload
+    // 2. Build customer and address payload
     // -----------------------------------------------------------------------
     const shippingAddr = order.shipping_address
     const billingAddr = order.billing_address ?? order.shipping_address
@@ -95,57 +77,49 @@ export default async function shirtplatformOrderForwardingHandler({
       email: customer?.email ?? order.email ?? "",
       phone: customer?.phone ?? shippingAddr?.phone ?? "",
       shippingAddress: {
-        firstName: shippingAddr?.first_name ?? "",
-        lastName: shippingAddr?.last_name ?? "",
         street: shippingAddr?.address_1 ?? "",
-        streetNo: shippingAddr?.address_2 ?? "",
         city: shippingAddr?.city ?? "",
         zip: shippingAddr?.postal_code ?? "",
         country: shippingAddr?.country_code?.toUpperCase() ?? "",
+        countryCode: shippingAddr?.country_code?.toUpperCase() ?? "",
+        firstName: shippingAddr?.first_name ?? "",
+        lastName: shippingAddr?.last_name ?? "",
         phone: shippingAddr?.phone ?? "",
         email: customer?.email ?? order.email ?? "",
       },
       billingAddress: {
-        firstName: billingAddr?.first_name ?? "",
-        lastName: billingAddr?.last_name ?? "",
         street: billingAddr?.address_1 ?? "",
-        streetNo: billingAddr?.address_2 ?? "",
         city: billingAddr?.city ?? "",
         zip: billingAddr?.postal_code ?? "",
         country: billingAddr?.country_code?.toUpperCase() ?? "",
+        countryCode: billingAddr?.country_code?.toUpperCase() ?? "",
+        firstName: billingAddr?.first_name ?? "",
+        lastName: billingAddr?.last_name ?? "",
         phone: billingAddr?.phone ?? "",
         email: customer?.email ?? order.email ?? "",
       },
     }
 
-    // -----------------------------------------------------------------------
-    // 4. Create base order on Shirtplatform
-    // -----------------------------------------------------------------------
-    const orderPayload: any = {
-      uniqueId: orderId,
-      financialStatus: "PAID",
-      customer: customerPayload,
-      orderShipping: {
-        title: "Standard Shipping",
-        carrier: { id: 872 }, // Generic Standard
-      },
-      ...(shirtplatformCountryId ? { country: { id: shirtplatformCountryId } } : {}),
-    }
-
-    const spOrder = await shirtplatform.createOrder(orderPayload)
-    const spOrderId = spOrder.id
-    logger.info(`[SP Order] Created Shirtplatform order ${spOrderId} for Medusa order ${orderId}`)
+    const shippingCountryCode = shippingAddr?.country_code?.toUpperCase()
 
     // -----------------------------------------------------------------------
-    // 5. Add line items to the Shirtplatform order
+    // 3. Build the designs array from line items
     // -----------------------------------------------------------------------
-    let itemsAdded = 0
+    const designs: Array<{
+      productId: number
+      amount: number
+      assignedColorId: number
+      assignedSizeId: number
+      sku?: string
+      viewPosition?: string
+      motive?: Record<string, any>
+      position?: Record<string, string>
+    }> = []
+
     const skippedItems: string[] = []
 
     for (const item of order.items ?? []) {
-      // Line-item metadata wins over variant metadata. This lets CreatorSE custom
-      // designs (unique per order, e.g. user-uploaded motives) be carried on the
-      // line item without polluting the shared variant.
+      // Line-item metadata wins over variant metadata.
       const meta: Record<string, any> = {
         ...(item.variant?.metadata ?? {}),
         ...(item.metadata ?? {}),
@@ -170,49 +144,54 @@ export default async function shirtplatformOrderForwardingHandler({
         continue
       }
 
-      if (spMotiveAttachment || spMotiveUrl || spMotiveId) {
-        // CreatorSE — dynamic design with motive placement (inline attachment, URL, or motive ID)
-        await shirtplatform.addOrderedProductUsingCreatorSE(spOrderId, {
-          productId: Number(spProductId),
-          assignedColorId: Number(spColorId),
-          assignedSizeId: Number(spSizeId),
-          amount: item.quantity,
-          motiveId: spMotiveId ? Number(spMotiveId) : undefined,
-          motiveAttachment: spMotiveAttachment ? String(spMotiveAttachment) : undefined,
-          motiveUrl: spMotiveUrl ? String(spMotiveUrl) : undefined,
-          motiveFilename: spMotiveFilename ? String(spMotiveFilename) : undefined,
-          viewPosition: String(spViewPosition),
-          positionLeft: spPositionLeft ? String(spPositionLeft) : undefined,
-          positionRight: spPositionRight ? String(spPositionRight) : undefined,
-          positionTop: spPositionTop ? String(spPositionTop) : undefined,
-        })
-        const motiveType = spMotiveAttachment ? 'inline' : spMotiveUrl ? 'url' : 'motive ' + spMotiveId
-        logger.info(
-          `[SP Order] Added CreatorSE item ${item.title} (${motiveType}, qty ${item.quantity}) to SP order ${spOrderId}`
-        )
-      } else {
-        // Base product — pre-designed, no custom motive
-        await shirtplatform.addOrderedProduct(
-          spOrderId,
-          Number(spProductId),
-          Number(spColorId),
-          Number(spSizeId),
-          item.quantity
-        )
-        logger.info(`[SP Order] Added item ${item.title} (qty ${item.quantity}) to SP order ${spOrderId}`)
+      // Build the motive reference
+      const motive: Record<string, any> = {}
+      if (spMotiveAttachment) {
+        motive.attachment = String(spMotiveAttachment)
+        if (spMotiveFilename) motive.filename = String(spMotiveFilename)
+      } else if (spMotiveUrl) {
+        motive.url = String(spMotiveUrl)
+        if (spMotiveFilename) motive.filename = String(spMotiveFilename)
+      } else if (spMotiveId) {
+        motive.id = Number(spMotiveId)
       }
-      itemsAdded++
+      // If no motive at all, leave empty (base product — no customization)
+
+      // Build position
+      const position: Record<string, string> =
+        spPositionLeft && spPositionRight
+          ? {
+              left: String(spPositionLeft),
+              right: String(spPositionRight),
+              ...(spPositionTop ? { top: String(spPositionTop) } : {}),
+            }
+          : { horizontalCenter: "0", verticalCenter: "0" }
+
+      designs.push({
+        productId: Number(spProductId),
+        amount: item.quantity,
+        assignedColorId: Number(spColorId),
+        assignedSizeId: Number(spSizeId),
+        viewPosition: String(spViewPosition),
+        motive,
+        position,
+      })
+
+      const motiveType = spMotiveAttachment ? "inline" : spMotiveUrl ? "url" : spMotiveId ? "motive " + spMotiveId : "base (no motive)"
+      logger.info(
+        `[SP Order] Built design: ${item.title} (${motiveType}, qty ${item.quantity}, color ${spColorId}, size ${spSizeId})`
+      )
     }
 
-    if (itemsAdded === 0) {
+    if (designs.length === 0) {
       logger.warn(
-        `[SP Order] No items could be added to SP order ${spOrderId}. Skipping commit. Skipped: ${skippedItems.join(", ")}`
+        `[SP Order] No items could be mapped to SP designs. Skipped: ${skippedItems.join(", ")}`
       )
       return
     }
 
     // -----------------------------------------------------------------------
-    // 6. Capture the Stripe payment before committing to SP
+    // 4. Capture the Stripe payment
     // -----------------------------------------------------------------------
     const paymentModule = container.resolve(Modules.PAYMENT) as any
     let paymentCaptured = false
@@ -263,13 +242,21 @@ export default async function shirtplatformOrderForwardingHandler({
     const financialStatus = paymentCaptured ? "PAID" : "PENDING"
 
     // -----------------------------------------------------------------------
-    // 7. Commit the order to production
+    // 5. Create order via single-call deferred CreatorSE endpoint
     // -----------------------------------------------------------------------
-    await shirtplatform.commitOrder(spOrderId, financialStatus)
-    logger.info(`[SP Order] Committed SP order ${spOrderId} to production (financialStatus: ${financialStatus})`)
+    const spOrder = await shirtplatform.createOrderUsingCreatorSE({
+      uniqueId: orderId,
+      financialStatus,
+      customer: customerPayload,
+      shippingCountryCode,
+      designs,
+    })
+
+    const spOrderId = spOrder.id
+    logger.info(`[SP Order] ✅ Created & committed Shirtplatform order ${spOrderId} for Medusa order ${orderId} (1 API call)`)
 
     // -----------------------------------------------------------------------
-    // 8. Save the Shirtplatform order ID back to Medusa order metadata
+    // 6. Save the Shirtplatform order ID back to Medusa order metadata
     // -----------------------------------------------------------------------
     await orderModule.updateOrders(orderId, {
       metadata: {
@@ -278,13 +265,13 @@ export default async function shirtplatformOrderForwardingHandler({
         shirtplatform_order_synced_at: new Date().toISOString(),
         shirtplatform_financial_status: financialStatus,
         shirtplatform_capture_debug: captureDebug,
+        shirtplatform_order_method: "deferred-creatorse", // distinguish from old 3-step
       },
     })
 
     logger.info(`[SP Order] ✅ Order ${orderId} successfully forwarded as SP order ${spOrderId}`)
   } catch (err: any) {
     // Never re-throw — the Medusa order must be preserved even if SP forwarding fails.
-    // Persist the failure on the order so it surfaces in admin and can be retried later.
     logger.error(`[SP Order] ❌ Failed to forward order ${orderId} to Shirtplatform: ${err.message}`)
 
     try {

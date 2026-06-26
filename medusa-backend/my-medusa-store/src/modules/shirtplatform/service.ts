@@ -173,6 +173,17 @@ class ShirtplatformModuleService {
   private readonly password: string
   readonly accountId: string
   readonly shopId: string
+  readonly shopAddress: {
+    name: string
+    company: string
+    street: string
+    city: string
+    zip: string
+    country: string
+    countryCode: string
+    phone: string
+    email: string
+  }
 
   constructor() {
     this.apiUrl = process.env.SHIRTPLATFORM_API_URL || ""
@@ -180,6 +191,17 @@ class ShirtplatformModuleService {
     this.password = process.env.SHIRTPLATFORM_PASSWORD || ""
     this.accountId = process.env.SHIRTPLATFORM_ACCOUNT_ID || ""
     this.shopId = process.env.SHIRTPLATFORM_SHOP_ID || ""
+    this.shopAddress = {
+      name: process.env.SHIRTPLATFORM_SHOP_NAME || "",
+      company: process.env.SHIRTPLATFORM_SHOP_COMPANY || "",
+      street: process.env.SHIRTPLATFORM_SHOP_STREET || "",
+      city: process.env.SHIRTPLATFORM_SHOP_CITY || "",
+      zip: process.env.SHIRTPLATFORM_SHOP_ZIP || "",
+      country: process.env.SHIRTPLATFORM_SHOP_COUNTRY || "",
+      countryCode: process.env.SHIRTPLATFORM_SHOP_COUNTRY_CODE || "",
+      phone: process.env.SHIRTPLATFORM_SHOP_PHONE || "",
+      email: process.env.SHIRTPLATFORM_SHOP_EMAIL || "",
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -859,6 +881,137 @@ class ShirtplatformModuleService {
       `/accounts/${this.accountId}/shops/${this.shopId}/orders/${orderId}/cancelOrder`,
       { method: "DELETE" }
     )
+  }
+
+  /**
+   * PREFERRED — Single-call deferred order using CreatorSE.
+   *
+   * POST /accounts/{aid}/shops/{sid}/orders/usingCreatorSE
+   *
+   * Creates the order, attaches all designed products, and automatically
+   * commits it to the production pipeline in one request. This replaces the
+   * deprecated 3-step create → add products → commit flow.
+   */
+  async createOrderUsingCreatorSE(options: {
+    uniqueId: string
+    financialStatus?: string
+    customer: {
+      firstName?: string
+      lastName?: string
+      email?: string
+      phone?: string
+      shippingAddress?: Record<string, any>
+      billingAddress?: Record<string, any>
+    }
+    shippingCountryCode?: string
+    designs: Array<{
+      productId: number
+      amount: number
+      assignedColorId: number
+      assignedSizeId: number
+      sku?: string
+      viewPosition?: string
+      motive?: Record<string, any>
+      position?: Record<string, string>
+    }>
+  }): Promise<ShirtplatformOrderResponse> {
+    const { uniqueId, financialStatus, customer, shippingCountryCode, designs } = options
+
+    // Map each design into the CreatorSE format.
+    // "BOTH" view position is expanded into two compositions (FRONT + BACK).
+    const creatorseDesigns = designs.map((d) => {
+      const rawViewPosition = d.viewPosition || "FRONT"
+      const motive = d.motive || {}
+      const position = d.position || { horizontalCenter: "0", verticalCenter: "0" }
+
+      const viewPositions = rawViewPosition === "BOTH"
+        ? ["FRONT", "BACK"]
+        : [rawViewPosition]
+
+      const compositions = viewPositions.map((vp) => ({
+        productArea: {
+          assignedView: {
+            view: { position: vp },
+          },
+        },
+        elements: {
+          creatorse_designElementMotive: [
+            {
+              motive,
+              position,
+            },
+          ],
+        },
+      }))
+
+      return {
+        productId: d.productId,
+        amount: d.amount,
+        assignedColor: { id: d.assignedColorId },
+        assignedSize: { id: d.assignedSizeId },
+        ...(d.sku ? { sku: d.sku } : {}),
+        compositions: {
+          creatorse_composition: compositions,
+        },
+      }
+    })
+
+    const payload: Record<string, any> = {
+      creatorse_productionOrderDeferred: {
+        uniqueId,
+        financialStatus: financialStatus || "PAID",
+        customer: {
+          firstName: customer.firstName || "",
+          lastName: customer.lastName || "",
+          email: customer.email || "",
+          phone: customer.phone || "",
+          billingAddress: customer.billingAddress || customer.shippingAddress || {},
+          shippingAddress: customer.shippingAddress || {},
+        },
+        shopAddress: {
+          company: this.shopAddress.company,
+          street: this.shopAddress.street,
+          city: this.shopAddress.city,
+          country: this.shopAddress.country,
+          firstName: this.shopAddress.name,
+          lastName: "",
+          name: this.shopAddress.name,
+          phone: this.shopAddress.phone,
+          email: this.shopAddress.email,
+          zip: this.shopAddress.zip,
+          countryCode: this.shopAddress.countryCode,
+        },
+        orderShipping: {
+          carrier: { name: "Generic Standard" },
+        },
+        designs: {
+          creatorse_design: creatorseDesigns,
+        },
+      },
+    }
+
+    // Add country if available (uses ISO code in deferred endpoint)
+    if (shippingCountryCode) {
+      payload.creatorse_productionOrderDeferred.country = {
+        code: shippingCountryCode,
+      }
+    }
+
+    const data = await this.request<any>(
+      `/accounts/${this.accountId}/shops/${this.shopId}/orders/usingCreatorSE`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    )
+
+    // Response wraps in productionOrderExpanded or creatorse_productionOrderDeferred
+    const order =
+      data?.productionOrderExpanded ??
+      data?.productionOrder ??
+      data?.creatorse_productionOrderDeferred ??
+      data
+    return { id: order.id, uniqueId: order.uniqueId }
   }
 
   // -------------------------------------------------------------------------
