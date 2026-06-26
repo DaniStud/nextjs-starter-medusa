@@ -1005,12 +1005,45 @@ class ShirtplatformModuleService {
       }
     )
 
-    // Response wraps in productionOrderExpanded or creatorse_productionOrderDeferred
-    const order =
-      data?.productionOrderExpanded ??
-      data?.productionOrder ??
-      data?.creatorse_productionOrderDeferred ??
-      data
+    // Deferred endpoint response can come in several Jettison wrappers.
+    // Log the keys so we can troubleshoot on the server.
+    if (data && typeof data === "object") {
+      console.log("[SP] createOrderUsingCreatorSE response keys:", Object.keys(data))
+    }
+
+    // Try every known wrapper, then brute-force the first sub-object with an id
+    let order: any = null
+    const wrappers = [
+      "productionOrderExpanded",
+      "productionOrder",
+      "creatorse_productionOrderDeferred",
+      "productionOrderDeferred",
+    ]
+    for (const key of wrappers) {
+      if (data?.[key]) {
+        order = data[key]
+        break
+      }
+    }
+    // Last resort: the data IS the order, or grab the first property that has an id
+    if (!order?.id && data && typeof data === "object") {
+      if (data.id) {
+        order = data
+      } else {
+        for (const v of Object.values(data)) {
+          if (v && typeof v === "object" && (v as any).id) {
+            order = v
+            break
+          }
+        }
+      }
+    }
+
+    if (!order?.id) {
+      console.error("[SP] Could not extract order id from createOrderUsingCreatorSE response. Raw data:", JSON.stringify(data).slice(0, 500))
+      throw new Error("Shirtplatform deferred order response did not contain an id")
+    }
+
     return { id: order.id, uniqueId: order.uniqueId }
   }
 
