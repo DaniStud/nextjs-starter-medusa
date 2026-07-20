@@ -29,6 +29,9 @@ COPY --from=builder /app/medusa-config.ts ./medusa-config.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/src ./src
 
+# Admin bundler expects admin at .medusa/server/admin/ but build puts it at .medusa/server/public/admin/
+RUN ln -sf /app/.medusa/server/public/admin /app/.medusa/server/admin
+
 # Medusa V2 serves the admin dashboard from the same process
 EXPOSE 9000
 
