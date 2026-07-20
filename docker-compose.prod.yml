@@ -78,8 +78,9 @@ services:
     restart: always
     env_file: .env.10shrts
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-medusa}:${POSTGRES_PASSWORD}@postgres:5432/db_10shrts
+      DATABASE_URL: postgresql://${POSTGRES_USER:-medusa}:${POSTGRES_PASSWORD}@postgres:5432/db_10shrts?sslmode=disable
       REDIS_URL: redis://redis:6379/0
+      HOST: 0.0.0.0
     depends_on:
       postgres:
         condition: service_healthy
