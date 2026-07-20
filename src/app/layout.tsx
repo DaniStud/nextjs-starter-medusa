@@ -20,7 +20,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
-  title: process.env.NEXT_PUBLIC_BRAND_NAME || "10SHRTS",
+  title: process.env.NEXT_PUBLIC_BRAND_NAME || "10SHIRTS",
   icons: {
     icon: process.env.NEXT_PUBLIC_LOGO_URL || "/images/10shirt-logo.png",
   },
