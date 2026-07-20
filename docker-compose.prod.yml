@@ -102,7 +102,7 @@ services:
       - "traefik.http.routers.admin-10shrts.tls.certresolver=letsencrypt"
       - "traefik.http.services.admin-10shrts.loadbalancer.server.port=9000"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/health || exit 1"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:9000/health', r => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 3
