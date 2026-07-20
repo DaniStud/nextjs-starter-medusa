@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install dependencies first (cache layer)
 COPY package.json package-lock.json* yarn.lock* ./
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --legacy-peer-deps
 
 # Copy source and build
 COPY . .
