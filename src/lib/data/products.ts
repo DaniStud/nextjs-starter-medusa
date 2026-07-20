@@ -5,6 +5,7 @@ import { sortProducts } from "@lib/util/sort-products"
 import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { getAuthHeaders, getCacheOptions } from "./cookies"
+import { getCollectionByHandle } from "./collections"
 import { getRegion, retrieveRegion } from "./regions"
 
 export const listProducts = async ({
@@ -135,4 +136,94 @@ export const listProductsWithSort = async ({
     nextPage,
     queryParams,
   }
+}
+
+/**
+ * Fetches products belonging to a collection, looked up by its handle.
+ * Returns an empty product list (and `collection: null`) when the
+ * collection does not exist, so callers can fall back gracefully.
+ */
+export const listProductsByCollection = async ({
+  handle,
+  countryCode,
+  regionId,
+  limit = 6,
+}: {
+  handle: string
+  countryCode?: string
+  regionId?: string
+  limit?: number
+}): Promise<{
+  products: HttpTypes.StoreProduct[]
+  count: number
+  collection: HttpTypes.StoreCollection | null
+}> => {
+  const collection = await getCollectionByHandle(handle).catch(() => null)
+
+  if (!collection?.id) {
+    return { products: [], count: 0, collection: null }
+  }
+
+  const {
+    response: { products, count },
+  } = await listProducts({
+    countryCode,
+    regionId,
+    queryParams: {
+      collection_id: [collection.id],
+      limit,
+    },
+  })
+
+  return { products, count, collection }
+}
+
+/**
+ * Best-effort "best sellers" list. The Medusa Store API has no sales-count
+ * sorting, so this resolves best sellers by merchandising signals, in order:
+ *
+ *  1. A collection with the handle "best-sellers" (curated in Medusa Admin)
+ *  2. Products tagged "best-seller" / "bestseller" / "best seller"
+ *
+ * Returns an empty array when neither signal exists — callers decide the
+ * fallback (the homepage falls back to a slice of the newest products).
+ */
+export const listBestSellers = async ({
+  countryCode,
+  regionId,
+  limit = 6,
+}: {
+  countryCode?: string
+  regionId?: string
+  limit?: number
+}): Promise<HttpTypes.StoreProduct[]> => {
+  // 1) Curated "best-sellers" collection
+  const { products: collectionProducts } = await listProductsByCollection({
+    handle: "best-sellers",
+    countryCode,
+    regionId,
+    limit,
+  })
+
+  if (collectionProducts.length > 0) {
+    return collectionProducts
+  }
+
+  // 2) Tag-based lookup (tags are already included in listProducts fields)
+  const {
+    response: { products: pool },
+  } = await listProducts({
+    countryCode,
+    regionId,
+    queryParams: { limit: 100 },
+  })
+
+  const isBestSellerTag = (value?: string | null) =>
+    !!value && /best[\s_-]?seller/i.test(value)
+
+  const tagged = pool.filter((product) =>
+    product.tags?.some((tag) => isBestSellerTag(tag.value))
+  )
+
+  return tagged.slice(0, limit)
 }

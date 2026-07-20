@@ -7,6 +7,7 @@
     "nav.menu": "Menu",
 
     "sideMenu.home": "Home",
+    "sideMenu.shop": "Shop",
     "sideMenu.store": "Store",
     "sideMenu.cart": "Cart",
 
@@ -396,6 +397,7 @@
     "nav.menu": "Menu",
 
     "sideMenu.home": "Hjem",
+    "sideMenu.shop": "Butik",
     "sideMenu.store": "Butik",
     "sideMenu.cart": "Kurv",
 

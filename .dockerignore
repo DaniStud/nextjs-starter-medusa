@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+!.env.template
+*.log
+.DS_Store
+medusa-backend/
+documentation/
+assets/
+*.md
+Dockerfile
+docker-compose*.yml

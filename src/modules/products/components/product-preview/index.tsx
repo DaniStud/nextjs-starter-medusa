@@ -29,12 +29,15 @@ export default function ProductPreview({
         href={`/products/${product.handle}`}
         className="group"
       >
-        <Thumbnail
-          thumbnail={product.thumbnail}
-          images={product.images}
-          size="full"
-          isFeatured={isFeatured}
-        />
+        {/* Veon-style hover: image scales inside a clipped container */}
+        <div className="overflow-hidden [&_img]:transition-transform [&_img]:duration-700 [&_img]:ease-out group-hover:[&_img]:scale-105">
+          <Thumbnail
+            thumbnail={product.thumbnail}
+            images={product.images}
+            size="full"
+            isFeatured={isFeatured}
+          />
+        </div>
       </LocalizedClientLink>
       <div className="grid grid-cols-2 mt-4 gap-x-4 items-center">
         <LocalizedClientLink

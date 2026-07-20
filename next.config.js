@@ -49,6 +49,7 @@ function buildCSP() {
  * @type {import('next').NextConfig}
  */
 const nextConfig = {
+  output: "standalone",
   async headers() {
     return [
       {
@@ -96,6 +97,15 @@ const nextConfig = {
         protocol: "https",
         hostname: "s3.eu-central-1.amazonaws.com",
       },
+      // Hetzner Object Storage (S3-compatible)
+      ...(process.env.HETZNER_S3_HOSTNAME
+        ? [
+            {
+              protocol: "https",
+              hostname: process.env.HETZNER_S3_HOSTNAME,
+            },
+          ]
+        : []),
       ...(S3_HOSTNAME && S3_PATHNAME
         ? [
             {

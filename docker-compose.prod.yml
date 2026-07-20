@@ -1,0 +1,154 @@
+# =============================================================================
+# Production Docker Compose — Hetzner VPS
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Requires:
+#   - .env.10shrts (10SHRTS env vars)
+#   - For tenants: .env.{tenant-slug} + add tenant services below
+# =============================================================================
+
+services:
+  # ── Reverse Proxy ──
+  traefik:
+    image: traefik:v3.1
+    restart: always
+    command:
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # HTTP → HTTPS redirect
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Let's Encrypt
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - web
+
+  # ── Shared Infrastructure ──
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-medusa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-db_10shrts}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Init script creates additional tenant databases on first run
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-medusa}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── 10SHRTS: Medusa Backend ──
+  medusa-10shrts:
+    build:
+      context: ./medusa-backend/my-medusa-store
+      dockerfile: Dockerfile
+    restart: always
+    env_file: .env.10shrts
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-medusa}:${POSTGRES_PASSWORD}@postgres:5432/db_10shrts
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - web
+      - internal
+    labels:
+      - "traefik.enable=true"
+      # API routes
+      - "traefik.http.routers.medusa-10shrts.rule=Host(`${API_DOMAIN_10SHRTS}`)"
+      - "traefik.http.routers.medusa-10shrts.entrypoints=websecure"
+      - "traefik.http.routers.medusa-10shrts.tls.certresolver=letsencrypt"
+      - "traefik.http.services.medusa-10shrts.loadbalancer.server.port=9000"
+      # Admin dashboard
+      - "traefik.http.routers.admin-10shrts.rule=Host(`${ADMIN_DOMAIN_10SHRTS}`)"
+      - "traefik.http.routers.admin-10shrts.entrypoints=websecure"
+      - "traefik.http.routers.admin-10shrts.tls.certresolver=letsencrypt"
+      - "traefik.http.services.admin-10shrts.loadbalancer.server.port=9000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ── 10SHRTS: Next.js Storefront ──
+  storefront-10shrts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MEDUSA_BACKEND_URL: https://${API_DOMAIN_10SHRTS}
+        NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY_10SHRTS}
+        NEXT_PUBLIC_STRIPE_KEY: ${NEXT_PUBLIC_STRIPE_KEY_10SHRTS}
+        NEXT_PUBLIC_DEFAULT_REGION: dk
+        NEXT_PUBLIC_BRAND_NAME: "10SHRTS"
+        NEXT_PUBLIC_BRAND_COLOR: "#ed1d27"
+        NEXT_PUBLIC_LOGO_URL: "/images/10shirt-logo.png"
+    restart: always
+    env_file: .env.10shrts
+    environment:
+      MEDUSA_BACKEND_URL: http://medusa-10shrts:9000
+    depends_on:
+      medusa-10shrts:
+        condition: service_healthy
+    networks:
+      - web
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.storefront-10shrts.rule=Host(`${STOREFRONT_DOMAIN_10SHRTS}`)"
+      - "traefik.http.routers.storefront-10shrts.entrypoints=websecure"
+      - "traefik.http.routers.storefront-10shrts.tls.certresolver=letsencrypt"
+      - "traefik.http.services.storefront-10shrts.loadbalancer.server.port=3000"
+
+  # ── Tenant services are added below or via override files ──
+  # To add a tenant, run: ./scripts/add-tenant.sh <slug> <domain>
+  # This generates a docker-compose.tenant-<slug>.yml override file.
+  # Then: docker compose -f docker-compose.prod.yml -f docker-compose.tenant-<slug>.yml up -d
+
+volumes:
+  letsencrypt:
+  postgres_data:
+  redis_data:
+
+networks:
+  web:
+    driver: bridge
+  internal:
+    driver: bridge

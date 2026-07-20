@@ -2,7 +2,7 @@
   "name": "medusa-next",
   "version": "1.0.3",
   "private": true,
-  "author": "Kasper Fabricius Kristensen <kasper@medusajs.com> & Victor Gerbrands <victor@medusajs.com> (https://www.medusajs.com)",
+  "author": "Kasper Fabricius Kristensen <kasper@medusajs.com> (https://www.medusajs.com)",
   "description": "Next.js Starter to be used with Medusa V2",
   "keywords": [
     "medusa-storefront"
@@ -25,6 +25,7 @@
     "@radix-ui/react-accordion": "^1.2.1",
     "@stripe/react-stripe-js": "^5.6.1",
     "@stripe/stripe-js": "^8.9.0",
+    "lenis": "^1.1.18",
     "lodash": "^4.17.21",
     "next": "^15.5.9",
     "qs": "^6.12.1",
@@ -60,5 +61,7 @@
     "react-dom": "^19.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0"
-  }
+  },
+  "main": "index.js",
+  "license": "ISC"
 }

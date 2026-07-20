@@ -20,14 +20,17 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
+  title: process.env.NEXT_PUBLIC_BRAND_NAME || "10SHRTS",
   icons: {
-    icon: "/images/10shirt-logo.png",
+    icon: process.env.NEXT_PUBLIC_LOGO_URL || "/images/10shirt-logo.png",
   },
 }
 
 export default function RootLayout(props: { children: React.ReactNode }) {
+  const brandColor = process.env.NEXT_PUBLIC_BRAND_COLOR || "#ed1d27"
+
   return (
-    <html lang="da" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang="da" className={`${spaceGrotesk.variable} ${inter.variable}`} style={{ "--tenant-brand-color": brandColor } as React.CSSProperties}>
       <body className="flex flex-col min-h-screen font-sans">
         <CookieConsentBanner />
         <main className="flex-grow relative">{props.children}</main>
