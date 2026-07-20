@@ -32,6 +32,7 @@ COPY --from=builder /app/src ./src
 # Medusa V2 serves the admin dashboard from the same process
 EXPOSE 9000
 
-USER medusa
+# Run as root — medusa user doesn't have access to built admin output
+# USER medusa
 
 CMD ["npx", "medusa", "start"]
