@@ -16,6 +16,8 @@ services:
     restart: always
     command:
       - "--api.dashboard=false"
+      - "--accesslog=true"
+      - "--log.level=DEBUG"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
