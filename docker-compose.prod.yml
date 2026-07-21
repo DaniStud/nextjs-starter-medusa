@@ -12,7 +12,7 @@
 services:
   # ── Reverse Proxy ──
   traefik:
-    image: traefik:v3.3
+    image: traefik:latest
     restart: always
     command:
       - "--api.dashboard=false"
