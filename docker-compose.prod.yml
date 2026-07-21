@@ -38,6 +38,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - web
+      - internal
 
   # ── Shared Infrastructure ──
   postgres:
@@ -90,7 +91,6 @@ services:
         condition: service_healthy
     networks:
       - web
-      - internal
     labels:
       - "traefik.enable=true"
       # Shared service (both API + Admin point to medusa)
@@ -134,7 +134,6 @@ services:
         condition: service_healthy
     networks:
       - web
-      - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.storefront-10shrts.rule=Host(`${STOREFRONT_DOMAIN_10SHRTS}`)"
