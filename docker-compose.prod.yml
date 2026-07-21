@@ -91,16 +91,18 @@ services:
       - internal
     labels:
       - "traefik.enable=true"
+      # Shared service (both API + Admin point to medusa)
+      - "traefik.http.services.medusa-10shrts.loadbalancer.server.port=9000"
       # API routes
       - "traefik.http.routers.medusa-10shrts.rule=Host(`${API_DOMAIN_10SHRTS}`)"
       - "traefik.http.routers.medusa-10shrts.entrypoints=websecure"
       - "traefik.http.routers.medusa-10shrts.tls.certresolver=letsencrypt"
-      - "traefik.http.services.medusa-10shrts.loadbalancer.server.port=9000"
+      - "traefik.http.routers.medusa-10shrts.service=medusa-10shrts"
       # Admin dashboard
       - "traefik.http.routers.admin-10shrts.rule=Host(`${ADMIN_DOMAIN_10SHRTS}`)"
       - "traefik.http.routers.admin-10shrts.entrypoints=websecure"
       - "traefik.http.routers.admin-10shrts.tls.certresolver=letsencrypt"
-      - "traefik.http.services.admin-10shrts.loadbalancer.server.port=9000"
+      - "traefik.http.routers.admin-10shrts.service=medusa-10shrts"
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:9000/health', r => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))\""]
       interval: 30s
