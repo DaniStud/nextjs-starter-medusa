@@ -42,10 +42,14 @@ ENV NODE_ENV=production
 
 RUN addgroup --system nextjs && adduser --system --ingroup nextjs nextjs
 
+# Create .next/cache writable by the runtime user — ISR revalidation writes here,
+# and the standalone output doesn't include it by default.
+RUN mkdir -p .next/cache && chown -R nextjs:nextjs .next
+
 # Copy standalone output
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nextjs /app/public ./public
 
 EXPOSE 3000
 
