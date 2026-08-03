@@ -141,6 +141,15 @@ services:
       - "traefik.http.routers.storefront-10shrts.entrypoints=websecure"
       - "traefik.http.routers.storefront-10shrts.tls.certresolver=letsencrypt"
       - "traefik.http.services.storefront-10shrts.loadbalancer.server.port=3000"
+      # www.10-shirts.dk -> 10-shirts.dk (permanent redirect, same cert resolver so TLS still terminates)
+      - "traefik.http.routers.storefront-10shrts-www.rule=Host(`www.${STOREFRONT_DOMAIN_10SHRTS}`)"
+      - "traefik.http.routers.storefront-10shrts-www.entrypoints=websecure"
+      - "traefik.http.routers.storefront-10shrts-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.storefront-10shrts-www.service=storefront-10shrts"
+      - "traefik.http.routers.storefront-10shrts-www.middlewares=storefront-10shrts-www-redirect"
+      - "traefik.http.middlewares.storefront-10shrts-www-redirect.redirectregex.regex=^https://www\\.(.+)"
+      - "traefik.http.middlewares.storefront-10shrts-www-redirect.redirectregex.replacement=https://$${1}"
+      - "traefik.http.middlewares.storefront-10shrts-www-redirect.redirectregex.permanent=true"
 
   # ── Tenant services are added below or via override files ──
   # To add a tenant, run: ./scripts/add-tenant.sh <slug> <domain>
