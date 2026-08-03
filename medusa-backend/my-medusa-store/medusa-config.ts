@@ -43,24 +43,22 @@ module.exports = defineConfig({
       resolve: "./src/modules/newsletter",
     },
     // File storage — Hetzner Object Storage (S3-compatible)
-    // TODO: Fix @medusajs/file-s3 version mismatch (2.15.5 vs framework 2.13.6)
-    // For now, use the default local file storage.
-    // ...(process.env.FILE_S3_ACCESS_KEY_ID
-    //   ? [
-    //       {
-    //         key: "file" as const,
-    //         resolve: "@medusajs/file-s3",
-    //         options: {
-    //           file_url: process.env.FILE_S3_FILE_URL,
-    //           access_key_id: process.env.FILE_S3_ACCESS_KEY_ID,
-    //           secret_access_key: process.env.FILE_S3_SECRET_ACCESS_KEY,
-    //           region: process.env.FILE_S3_REGION || "eu-central-1",
-    //           bucket: process.env.FILE_S3_BUCKET,
-    //           endpoint: process.env.FILE_S3_ENDPOINT,
-    //           prefix: process.env.FILE_S3_PREFIX,
-    //         },
-    //       },
-    //     ]
-    //   : []),
+    ...(process.env.FILE_S3_ACCESS_KEY_ID
+      ? [
+          {
+            key: "file" as const,
+            resolve: "@medusajs/file-s3",
+            options: {
+              file_url: process.env.FILE_S3_FILE_URL,
+              access_key_id: process.env.FILE_S3_ACCESS_KEY_ID,
+              secret_access_key: process.env.FILE_S3_SECRET_ACCESS_KEY,
+              region: process.env.FILE_S3_REGION || "fsn1",
+              bucket: process.env.FILE_S3_BUCKET,
+              endpoint: process.env.FILE_S3_ENDPOINT,
+              prefix: process.env.FILE_S3_PREFIX,
+            },
+          },
+        ]
+      : []),
   ],
 })
