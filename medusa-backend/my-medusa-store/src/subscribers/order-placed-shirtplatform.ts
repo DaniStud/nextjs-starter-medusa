@@ -2,6 +2,7 @@ import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { Modules } from "@medusajs/framework/utils"
 import { SHIRTPLATFORM_MODULE } from "../modules/shirtplatform"
 import ShirtplatformModuleService from "../modules/shirtplatform/service"
+import { mapOrderToCreatorSEInputs } from "../modules/shirtplatform/order-mapper"
 
 /**
  * Forwards a placed Medusa order to Shirtplatform for print-on-demand fulfillment
@@ -65,121 +66,26 @@ export default async function shirtplatformOrderForwardingHandler({
     }
 
     // -----------------------------------------------------------------------
-    // 2. Build customer and address payload
+    // 2. Build customer + designs from the order (shared mapper — the preview
+    //    endpoint uses the exact same code, so a dry-run payload is identical
+    //    to what production sends).
     // -----------------------------------------------------------------------
-    const shippingAddr = order.shipping_address
-    const billingAddr = order.billing_address ?? order.shipping_address
-    const customer = order.customer
+    const { customer: customerPayload, shippingCountryCode, designs, skippedItems } =
+      mapOrderToCreatorSEInputs(order)
 
-    const customerPayload = {
-      firstName: customer?.first_name ?? shippingAddr?.first_name ?? "",
-      lastName: customer?.last_name ?? shippingAddr?.last_name ?? "",
-      email: customer?.email ?? order.email ?? "",
-      phone: customer?.phone ?? shippingAddr?.phone ?? "",
-      shippingAddress: {
-        street: shippingAddr?.address_1 ?? "",
-        city: shippingAddr?.city ?? "",
-        zip: shippingAddr?.postal_code ?? "",
-        country: shippingAddr?.country_code?.toUpperCase() ?? "",
-        countryCode: shippingAddr?.country_code?.toUpperCase() ?? "",
-        firstName: shippingAddr?.first_name ?? "",
-        lastName: shippingAddr?.last_name ?? "",
-        phone: shippingAddr?.phone ?? "",
-        email: customer?.email ?? order.email ?? "",
-      },
-      billingAddress: {
-        street: billingAddr?.address_1 ?? "",
-        city: billingAddr?.city ?? "",
-        zip: billingAddr?.postal_code ?? "",
-        country: billingAddr?.country_code?.toUpperCase() ?? "",
-        countryCode: billingAddr?.country_code?.toUpperCase() ?? "",
-        firstName: billingAddr?.first_name ?? "",
-        lastName: billingAddr?.last_name ?? "",
-        phone: billingAddr?.phone ?? "",
-        email: customer?.email ?? order.email ?? "",
-      },
+    for (const skipped of skippedItems) {
+      logger.warn(`[SP Order] Skipping item ${skipped} — missing Shirtplatform metadata`)
     }
-
-    const shippingCountryCode = shippingAddr?.country_code?.toUpperCase()
-
-    // -----------------------------------------------------------------------
-    // 3. Build the designs array from line items
-    // -----------------------------------------------------------------------
-    const designs: Array<{
-      productId: number
-      amount: number
-      assignedColorId: number
-      assignedSizeId: number
-      sku?: string
-      viewPosition?: string
-      motive?: Record<string, any>
-      position?: Record<string, string>
-    }> = []
-
-    const skippedItems: string[] = []
-
-    for (const item of order.items ?? []) {
-      // Line-item metadata wins over variant metadata.
-      const meta: Record<string, any> = {
-        ...(item.variant?.metadata ?? {}),
-        ...(item.metadata ?? {}),
-      }
-      const spProductId = meta.shirtplatform_product_id
-      const spColorId = meta.shirtplatform_assigned_color_id
-      const spSizeId = meta.shirtplatform_assigned_size_id
-      const spMotiveId = meta.shirtplatform_motive_id
-      const spMotiveAttachment = meta.shirtplatform_motive_attachment
-      const spMotiveUrl = meta.shirtplatform_motive_url
-      const spMotiveFilename = meta.shirtplatform_motive_filename
-      const spViewPosition = meta.shirtplatform_view_position ?? "FRONT"
-      const spPositionLeft = meta.shirtplatform_position_left
-      const spPositionRight = meta.shirtplatform_position_right
-      const spPositionTop = meta.shirtplatform_position_top
-
-      if (!spProductId || !spColorId || !spSizeId) {
-        skippedItems.push(item.id)
-        logger.warn(
-          `[SP Order] Skipping item ${item.id} (${item.title}) — missing Shirtplatform metadata`
-        )
-        continue
-      }
-
-      // Build the motive reference
-      const motive: Record<string, any> = {}
-      if (spMotiveAttachment) {
-        motive.attachment = String(spMotiveAttachment)
-        if (spMotiveFilename) motive.filename = String(spMotiveFilename)
-      } else if (spMotiveUrl) {
-        motive.url = String(spMotiveUrl)
-        if (spMotiveFilename) motive.filename = String(spMotiveFilename)
-      } else if (spMotiveId) {
-        motive.id = Number(spMotiveId)
-      }
-      // If no motive at all, leave empty (base product — no customization)
-
-      // Build position
-      const position: Record<string, string> =
-        spPositionLeft && spPositionRight
-          ? {
-              left: String(spPositionLeft),
-              right: String(spPositionRight),
-              ...(spPositionTop ? { top: String(spPositionTop) } : {}),
-            }
-          : { horizontalCenter: "0", verticalCenter: "0" }
-
-      designs.push({
-        productId: Number(spProductId),
-        amount: item.quantity,
-        assignedColorId: Number(spColorId),
-        assignedSizeId: Number(spSizeId),
-        viewPosition: String(spViewPosition),
-        motive,
-        position,
-      })
-
-      const motiveType = spMotiveAttachment ? "inline" : spMotiveUrl ? "url" : spMotiveId ? "motive " + spMotiveId : "base (no motive)"
+    for (const d of designs) {
+      const motiveType = d.motive?.attachment
+        ? "inline"
+        : d.motive?.url
+        ? "url"
+        : d.motive?.id
+        ? "motive " + d.motive.id
+        : "base (no motive)"
       logger.info(
-        `[SP Order] Built design: ${item.title} (${motiveType}, qty ${item.quantity}, color ${spColorId}, size ${spSizeId})`
+        `[SP Order] Built design: product ${d.productId} (${motiveType}, qty ${d.amount}, color ${d.assignedColorId}, size ${d.assignedSizeId}, view ${d.viewPosition})`
       )
     }
 
@@ -187,6 +93,36 @@ export default async function shirtplatformOrderForwardingHandler({
       logger.warn(
         `[SP Order] No items could be mapped to SP designs. Skipped: ${skippedItems.join(", ")}`
       )
+      return
+    }
+
+    // -----------------------------------------------------------------------
+    // 3. DRY RUN — when SHIRTPLATFORM_DRY_RUN is enabled, build the exact
+    //    payload and store it on the order instead of capturing payment or
+    //    sending anything to Shirtplatform. Lets us verify the buy flow and
+    //    hand the payload to Shirtplatform before placing a real order.
+    // -----------------------------------------------------------------------
+    const dryRun = /^(1|true|yes)$/i.test(process.env.SHIRTPLATFORM_DRY_RUN ?? "")
+    if (dryRun) {
+      const previewPayload = shirtplatform.buildCreatorSEPayload({
+        uniqueId: orderId,
+        financialStatus: "PAID", // assumed — no capture happens in a dry run
+        customer: customerPayload,
+        shippingCountryCode,
+        designs,
+      })
+      logger.info(
+        `[SP Order] 🧪 DRY RUN — not sending. Payload for order ${orderId}:\n${JSON.stringify(previewPayload, null, 2)}`
+      )
+      await orderModule.updateOrders(orderId, {
+        metadata: {
+          ...(order.metadata ?? {}),
+          shirtplatform_dry_run: true,
+          shirtplatform_dry_run_at: new Date().toISOString(),
+          shirtplatform_dry_run_payload: previewPayload,
+          shirtplatform_dry_run_skipped_items: skippedItems,
+        },
+      })
       return
     }
 

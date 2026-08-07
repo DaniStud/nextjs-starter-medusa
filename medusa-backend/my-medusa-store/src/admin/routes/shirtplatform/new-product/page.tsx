@@ -120,6 +120,13 @@ const NewShirtplatformProductPage = () => {
   const [skipMotive, setSkipMotive] = useState(false)
   const [showMotiveHelp, setShowMotiveHelp] = useState(false)
 
+  // step 3: neck tag (inner-neck label) — independent of the main motive
+  const [neckTagFile, setNeckTagFile] = useState<File | null>(null)
+  const [neckTagPreview, setNeckTagPreview] = useState<string | null>(null)
+  const [neckTag, setNeckTag] = useState<MotiveUploadResult | null>(null)
+  const [neckTagUploading, setNeckTagUploading] = useState(false)
+  const neckTagInputRef = useRef<HTMLInputElement | null>(null)
+
   // step 4: product metadata
   const [title, setTitle] = useState("")
   const [handle, setHandle] = useState("")
@@ -246,6 +253,43 @@ const NewShirtplatformProductPage = () => {
     }
   }
 
+  const onNeckTagSelected = async (file: File) => {
+    if (!ALLOWED_MOTIVE_TYPES.includes(file.type)) {
+      toast.error(`Unsupported file type "${file.type || "unknown"}". Use PNG, JPG, or SVG.`)
+      return
+    }
+    if (file.size > MAX_MOTIVE_SIZE_MB * 1024 * 1024) {
+      toast.error(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max ${MAX_MOTIVE_SIZE_MB} MB.`)
+      return
+    }
+
+    setNeckTagFile(file)
+    setNeckTag(null)
+    setNeckTagPreview(URL.createObjectURL(file))
+    setNeckTagUploading(true)
+    try {
+      const base64 = await fileToBase64(file)
+      const res = await apiJson<{ motive: MotiveUploadResult }>(
+        "/admin/shirtplatform/motives",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            filename: file.name,
+            mime_type: file.type || "image/png",
+            content_base64: base64,
+          }),
+        }
+      )
+      setNeckTag(res.motive)
+      toast.success("Neck tag uploaded")
+    } catch (err: any) {
+      toast.error(`Neck tag upload failed: ${err.message}`)
+      setNeckTag(null)
+    } finally {
+      setNeckTagUploading(false)
+    }
+  }
+
   // ---------- step 4: submit ----------
   const submit = async () => {
     if (!detail) return
@@ -287,6 +331,12 @@ const NewShirtplatformProductPage = () => {
           position_right: positionRight || undefined,
         }
       }
+      if (neckTag) {
+        body.neck_tag = {
+          url: neckTag.url,
+          filename: neckTag.filename,
+        }
+      }
 
       const res = await apiJson<{
         product: { id: string; title: string }
@@ -312,6 +362,9 @@ const NewShirtplatformProductPage = () => {
       setMotiveFile(null)
       setMotive(null)
       setMotivePreview(null)
+      setNeckTagFile(null)
+      setNeckTag(null)
+      setNeckTagPreview(null)
       setTitle("")
       setHandle("")
       setDescription("")
@@ -760,6 +813,69 @@ const NewShirtplatformProductPage = () => {
               </Text>
             </>
           )}
+
+          {/* --- Neck tag (inner-neck label) — independent of the main motive --- */}
+          <div className="border-t pt-4 mt-2 space-y-3">
+            <div>
+              <Heading level="h3">Neck tag (inner-neck label)</Heading>
+              <Text size="small" className="text-ui-fg-subtle">
+                Optional. Printed on the product's <b>NECKTAG</b> print area, centered.
+                Requires the base product to have a neck-tag area enabled on Shirtplatform.
+              </Text>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                ref={neckTagInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void onNeckTagSelected(f)
+                }}
+                className="hidden"
+              />
+              <Button
+                variant="secondary"
+                onClick={() => neckTagInputRef.current?.click()}
+                disabled={neckTagUploading}
+              >
+                {neckTagUploading ? "Uploading…" : neckTag ? "Replace neck tag" : "Upload neck tag"}
+              </Button>
+              {neckTagFile && (
+                <Text size="small" className="text-ui-fg-subtle">
+                  {neckTagFile.name} ({Math.round(neckTagFile.size / 1024)} KB)
+                </Text>
+              )}
+              {neckTag?.url && <Badge color="green">Uploaded</Badge>}
+              {neckTagFile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNeckTagFile(null)
+                    setNeckTag(null)
+                    setNeckTagPreview(null)
+                    if (neckTagInputRef.current) neckTagInputRef.current.value = ""
+                  }}
+                  className="text-ui-fg-muted hover:text-ui-fg-error transition-colors"
+                  title="Remove neck tag"
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {neckTagPreview && (
+              <div className="text-center inline-block">
+                <Text size="small" className="text-ui-fg-subtle mb-1">Neck tag</Text>
+                <img
+                  src={neckTagPreview}
+                  alt="Neck tag"
+                  className="max-h-32 rounded border bg-ui-bg-subtle"
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -837,6 +953,7 @@ const NewShirtplatformProductPage = () => {
             variantCount={availableCombinationsCount}
             motive={motive}
             skipMotive={skipMotive}
+            neckTag={neckTag}
           />
         </div>
       )}
@@ -1026,6 +1143,7 @@ function ReviewSummary({
   variantCount,
   motive,
   skipMotive,
+  neckTag,
 }: {
   detail: BaseProductDetail | null
   colorCount: number
@@ -1033,6 +1151,7 @@ function ReviewSummary({
   variantCount: number
   motive: MotiveUploadResult | null
   skipMotive: boolean
+  neckTag: MotiveUploadResult | null
 }) {
   if (!detail) return null
   return (
@@ -1047,6 +1166,9 @@ function ReviewSummary({
       <div>
         <b>Motive:</b>{" "}
         {skipMotive ? "None (plain base shirt)" : motive?.filename ?? "—"}
+      </div>
+      <div>
+        <b>Neck tag:</b> {neckTag?.filename ?? "None"}
       </div>
     </div>
   )

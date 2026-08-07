@@ -117,6 +117,41 @@ export interface ShirtplatformOrderResponse {
   uniqueId?: string
 }
 
+/** One designed product line for the CreatorSE deferred order. */
+export interface CreatorSEDesignInput {
+  productId: number
+  amount: number
+  assignedColorId: number
+  assignedSizeId: number
+  sku?: string
+  viewPosition?: string
+  motive?: Record<string, any>
+  position?: Record<string, string>
+  /** Optional neck-tag (inner-neck label) placed on the NECKTAG view as an extra
+   *  composition. Requires the base product to expose a NECKTAG print area in the
+   *  Shirtplatform back office. */
+  neckTag?: {
+    motive: Record<string, any>
+    position?: Record<string, string>
+  }
+}
+
+/** Everything needed to build (or send) a CreatorSE deferred order. */
+export interface CreatorSEOrderInput {
+  uniqueId: string
+  financialStatus?: string
+  customer: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    phone?: string
+    shippingAddress?: Record<string, any>
+    billingAddress?: Record<string, any>
+  }
+  shippingCountryCode?: string
+  designs: CreatorSEDesignInput[]
+}
+
 export interface ShirtplatformWebhookPayload {
   id: number
   url: string
@@ -173,9 +208,17 @@ class ShirtplatformModuleService {
   private readonly password: string
   readonly accountId: string
   readonly shopId: string
+  /** Shirtplatform carrier ID used for order shipping (e.g. 899 = Spring untracked).
+   *  Configured via SHIRTPLATFORM_SHIPPING_CARRIER_ID. When unset we fall back to the
+   *  legacy "Generic Standard" placeholder, which Shirtplatform rejects at production. */
+  readonly shippingCarrierId: number | null
   readonly shopAddress: {
     name: string
     company: string
+    /** Sender first name — required by Shirtplatform ("missing sender first or last name"). */
+    firstName: string
+    /** Sender last name — required by Shirtplatform. */
+    lastName: string
     street: string
     city: string
     zip: string
@@ -191,9 +234,14 @@ class ShirtplatformModuleService {
     this.password = process.env.SHIRTPLATFORM_PASSWORD || ""
     this.accountId = process.env.SHIRTPLATFORM_ACCOUNT_ID || ""
     this.shopId = process.env.SHIRTPLATFORM_SHOP_ID || ""
+    const rawCarrierId = Number(process.env.SHIRTPLATFORM_SHIPPING_CARRIER_ID)
+    this.shippingCarrierId = Number.isFinite(rawCarrierId) && rawCarrierId > 0 ? rawCarrierId : null
     this.shopAddress = {
       name: process.env.SHIRTPLATFORM_SHOP_NAME || "",
       company: process.env.SHIRTPLATFORM_SHOP_COMPANY || "",
+      // Fall back to the shop name for firstName so the sender first name is never empty.
+      firstName: process.env.SHIRTPLATFORM_SHOP_FIRST_NAME || process.env.SHIRTPLATFORM_SHOP_NAME || "",
+      lastName: process.env.SHIRTPLATFORM_SHOP_LAST_NAME || "",
       street: process.env.SHIRTPLATFORM_SHOP_STREET || "",
       city: process.env.SHIRTPLATFORM_SHOP_CITY || "",
       zip: process.env.SHIRTPLATFORM_SHOP_ZIP || "",
@@ -892,29 +940,13 @@ class ShirtplatformModuleService {
    * commits it to the production pipeline in one request. This replaces the
    * deprecated 3-step create → add products → commit flow.
    */
-  async createOrderUsingCreatorSE(options: {
-    uniqueId: string
-    financialStatus?: string
-    customer: {
-      firstName?: string
-      lastName?: string
-      email?: string
-      phone?: string
-      shippingAddress?: Record<string, any>
-      billingAddress?: Record<string, any>
-    }
-    shippingCountryCode?: string
-    designs: Array<{
-      productId: number
-      amount: number
-      assignedColorId: number
-      assignedSizeId: number
-      sku?: string
-      viewPosition?: string
-      motive?: Record<string, any>
-      position?: Record<string, string>
-    }>
-  }): Promise<ShirtplatformOrderResponse> {
+  /**
+   * Build the exact CreatorSE deferred-order payload that WOULD be sent to
+   * Shirtplatform — without sending it. Pure and side-effect-free (aside from a
+   * warning log when shipping is misconfigured), so it backs both the real order
+   * forwarding and the dry-run / payload-preview endpoint.
+   */
+  buildCreatorSEPayload(options: CreatorSEOrderInput): Record<string, any> {
     const { uniqueId, financialStatus, customer, shippingCountryCode, designs } = options
 
     // Map each design into the CreatorSE format.
@@ -928,7 +960,7 @@ class ShirtplatformModuleService {
         ? ["FRONT", "BACK"]
         : [rawViewPosition]
 
-      const compositions = viewPositions.map((vp) => ({
+      const compositions: Array<Record<string, any>> = viewPositions.map((vp) => ({
         productArea: {
           assignedView: {
             view: { position: vp },
@@ -943,6 +975,25 @@ class ShirtplatformModuleService {
           ],
         },
       }))
+
+      // Neck tag → an extra composition on the NECKTAG view (default: centered).
+      if (d.neckTag?.motive && Object.keys(d.neckTag.motive).length > 0) {
+        compositions.push({
+          productArea: {
+            assignedView: {
+              view: { position: "NECKTAG" },
+            },
+          },
+          elements: {
+            creatorse_designElementMotive: [
+              {
+                motive: d.neckTag.motive,
+                position: d.neckTag.position || { horizontalCenter: "0", verticalCenter: "0" },
+              },
+            ],
+          },
+        })
+      }
 
       return {
         productId: d.productId,
@@ -973,17 +1024,15 @@ class ShirtplatformModuleService {
           street: this.shopAddress.street,
           city: this.shopAddress.city,
           country: this.shopAddress.country,
-          firstName: this.shopAddress.name,
-          lastName: "",
+          firstName: this.shopAddress.firstName,
+          lastName: this.shopAddress.lastName,
           name: this.shopAddress.name,
           phone: this.shopAddress.phone,
           email: this.shopAddress.email,
           zip: this.shopAddress.zip,
           countryCode: this.shopAddress.countryCode,
         },
-        orderShipping: {
-          carrier: { name: "Generic Standard" },
-        },
+        orderShipping: this.buildOrderShipping(),
         designs: {
           creatorse_design: creatorseDesigns,
         },
@@ -996,6 +1045,28 @@ class ShirtplatformModuleService {
         code: shippingCountryCode,
       }
     }
+
+    return payload
+  }
+
+  /**
+   * Build the orderShipping block. Prefers a real carrier ID
+   * (SHIRTPLATFORM_SHIPPING_CARRIER_ID, e.g. 899 = Spring untracked). Falls back
+   * to the legacy "Generic Standard" placeholder — which Shirtplatform rejects at
+   * production — only when no carrier ID is configured, and warns loudly.
+   */
+  private buildOrderShipping(): Record<string, any> {
+    if (this.shippingCarrierId) {
+      return { carrier: { id: this.shippingCarrierId } }
+    }
+    console.warn(
+      "[SP] SHIRTPLATFORM_SHIPPING_CARRIER_ID is not set — using the 'Generic Standard' placeholder, which Shirtplatform rejects in production. Set it to a real carrier ID (e.g. 899 for Spring untracked)."
+    )
+    return { carrier: { name: "Generic Standard" } }
+  }
+
+  async createOrderUsingCreatorSE(options: CreatorSEOrderInput): Promise<ShirtplatformOrderResponse> {
+    const payload = this.buildCreatorSEPayload(options)
 
     const data = await this.request<any>(
       `/accounts/${this.accountId}/shops/${this.shopId}/orders/usingCreatorSE`,

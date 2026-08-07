@@ -62,6 +62,13 @@ type Body = {
     position_left?: string
     position_right?: string
   }
+  neck_tag?: {
+    url?: string
+    filename?: string
+    position_top?: string
+    position_left?: string
+    position_right?: string
+  }
   product?: {
     title?: string
     handle?: string
@@ -107,6 +114,11 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   // (subscriber will use `usingBaseProduct` instead of CreatorSE).
   const motive = body.motive
   const hasMotive = Boolean(motive?.url)
+
+  // Neck tag is optional and independent of the main motive (a plain base shirt
+  // can still get a neck label). Placed on the product's NECKTAG print area.
+  const neckTag = body.neck_tag
+  const hasNeckTag = Boolean(neckTag?.url)
 
   // ---- fetch SP base detail (cached) --------------------------------------
   const shirtplatform = req.scope.resolve<ShirtplatformModuleService>(
@@ -163,6 +175,24 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       }
     : {}
 
+  const neckTagMetadata: Record<string, string> = hasNeckTag
+    ? {
+        shirtplatform_necktag_url: neckTag!.url!,
+        ...(neckTag!.filename
+          ? { shirtplatform_necktag_filename: neckTag!.filename }
+          : {}),
+        ...(neckTag!.position_top
+          ? { shirtplatform_necktag_position_top: neckTag!.position_top }
+          : {}),
+        ...(neckTag!.position_left
+          ? { shirtplatform_necktag_position_left: neckTag!.position_left }
+          : {}),
+        ...(neckTag!.position_right
+          ? { shirtplatform_necktag_position_right: neckTag!.position_right }
+          : {}),
+      }
+    : {}
+
   for (const colorId of colorIds) {
     for (const sizeId of sizeIds) {
       const skuEntry = skuByPair.get(`${colorId}:${sizeId}`)
@@ -192,6 +222,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           shirtplatform_assigned_color_id: colorId,
           shirtplatform_assigned_size_id: sizeId,
           ...motiveMetadata,
+          ...neckTagMetadata,
         },
       })
     }
@@ -241,6 +272,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
             shirtplatform_motive_url: motive!.url,
             shirtplatform_motive_filename: motive!.filename ?? null,
             shirtplatform_view_position: motive!.view_position ?? "FRONT",
+          }
+        : {}),
+      ...(hasNeckTag
+        ? {
+            shirtplatform_necktag_url: neckTag!.url,
+            shirtplatform_necktag_filename: neckTag!.filename ?? null,
           }
         : {}),
     },
