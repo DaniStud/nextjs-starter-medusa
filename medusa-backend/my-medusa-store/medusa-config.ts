@@ -15,6 +15,22 @@ module.exports = defineConfig({
     }
   },
   modules: [
+    // Durable event bus (Redis) — makes order.placed and other events survive
+    // restarts with retry/backoff, instead of the default in-memory bus that
+    // drops events on process restart. Falls back to REDIS_URL if a dedicated
+    // events instance isn't configured.
+    {
+      key: "event_bus",
+      resolve: "@medusajs/event-bus-redis",
+      options: {
+        redisUrl: process.env.EVENTS_REDIS_URL || process.env.REDIS_URL,
+      },
+    },
+    // NOTE: @medusajs/workflow-engine-redis is installed but intentionally NOT
+    // registered yet — registering it conflicts with the built-in workflow
+    // engine ("Service 'workflows' is already defined") and changing the engine
+    // affects cart completion, so it needs its own dedicated migration/test pass.
+    // The durable event bus above already makes order.placed subscribers durable.
     // Stripe payment — uncomment and add STRIPE_API_KEY to .env to enable
     ...(process.env.STRIPE_API_KEY
       ? [

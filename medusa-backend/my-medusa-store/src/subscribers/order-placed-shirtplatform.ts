@@ -152,6 +152,10 @@ export default async function shirtplatformOrderForwardingHandler({
 
         for (const payment of payments) {
           captureDebug += `p=${payment.id},status=${payment.status},captured=${!!payment.captured_at},provider=${payment.provider_id},amt=${payment.amount};`
+          // Only handle Stripe payments (matches the auto-capture subscriber's filter)
+          if (payment.provider_id !== "pp_stripe_stripe") {
+            continue
+          }
           if (payment.captured_at) {
             paymentCaptured = true
             continue
@@ -176,6 +180,27 @@ export default async function shirtplatformOrderForwardingHandler({
     }
 
     const financialStatus = paymentCaptured ? "PAID" : "PENDING"
+
+    // -----------------------------------------------------------------------
+    // 4b. Guard — do NOT forward unpaid orders to fulfillment. A failed/pending
+    //     capture must not result in a real print-on-demand order being placed.
+    //     The order is preserved and flagged for manual review instead.
+    // -----------------------------------------------------------------------
+    if (financialStatus !== "PAID") {
+      logger.error(
+        `[SP Order] ❌ Payment not captured for order ${orderId} — NOT forwarding to Shirtplatform. Debug: ${captureDebug}`
+      )
+      await orderModule.updateOrders(orderId, {
+        metadata: {
+          ...(order.metadata ?? {}),
+          shirtplatform_forward_blocked: true,
+          shirtplatform_forward_blocked_reason: "payment_not_captured",
+          shirtplatform_capture_debug: captureDebug,
+          shirtplatform_forward_blocked_at: new Date().toISOString(),
+        },
+      })
+      return
+    }
 
     // -----------------------------------------------------------------------
     // 5. Create order via single-call deferred CreatorSE endpoint
