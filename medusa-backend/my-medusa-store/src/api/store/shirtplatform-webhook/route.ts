@@ -1,6 +1,12 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import { createHmac, timingSafeEqual } from "crypto"
+import { WebhookEventTracker } from "../../stripe/utils"
+
+const SP_EVENT_PREFIX = "sp:webhook:event:"
+// Bound the metadata fallback scan so a spoofed/unknown payload can't force a
+// full-table load (DoS). The primary lookup is by uniqueId (= Medusa order id).
+const FALLBACK_SCAN_LIMIT = 200
 
 /**
  * POST /store/shirtplatform-webhook
@@ -21,48 +27,52 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   // -------------------------------------------------------------------------
   const secret = process.env.SHIRTPLATFORM_WEBHOOK_SECRET
 
-  if (secret) {
-    const signature = req.headers["x-shirtplatform-hmac-sha256"] as string | undefined
+  // Fail closed: without a configured secret we cannot authenticate the sender,
+  // so we reject rather than trust an unsigned request. (Set
+  // SHIRTPLATFORM_WEBHOOK_SECRET to the value registered with Shirtplatform.)
+  if (!secret) {
+    logger.error("[SP Webhook] SHIRTPLATFORM_WEBHOOK_SECRET not set — rejecting request")
+    return res.status(503).json({ error: "Webhook not configured" })
+  }
 
-    if (!signature) {
-      logger.warn("[SP Webhook] Missing x-shirtplatform-hmac-sha256 header")
-      return res.status(401).json({ error: "Missing signature" })
-    }
+  const signature = req.headers["x-shirtplatform-hmac-sha256"] as string | undefined
 
-    // Get raw body for HMAC calculation (same approach as Stripe webhook)
-    const expressReq = req as any
-    let rawBody: Buffer
+  if (!signature) {
+    logger.warn("[SP Webhook] Missing x-shirtplatform-hmac-sha256 header")
+    return res.status(401).json({ error: "Missing signature" })
+  }
 
-    if (expressReq.rawBody && Buffer.isBuffer(expressReq.rawBody)) {
-      rawBody = expressReq.rawBody
-    } else if (typeof expressReq.rawBody === "string") {
-      rawBody = Buffer.from(expressReq.rawBody, "utf8")
-    } else if (Buffer.isBuffer(expressReq.body)) {
-      rawBody = expressReq.body
-    } else if (typeof expressReq.body === "string") {
-      rawBody = Buffer.from(expressReq.body, "utf8")
-    } else {
-      rawBody = Buffer.from(JSON.stringify(expressReq.body ?? ""), "utf8")
-    }
+  // Get raw body for HMAC calculation (captured by middlewares.ts captureRawBody)
+  const expressReq = req as any
+  let rawBody: Buffer
 
-    const expectedSig = createHmac("sha256", secret).update(rawBody).digest("hex")
-
-    let signaturesMatch = false
-    try {
-      signaturesMatch = timingSafeEqual(
-        Buffer.from(signature, "utf8"),
-        Buffer.from(expectedSig, "utf8")
-      )
-    } catch {
-      signaturesMatch = false
-    }
-
-    if (!signaturesMatch) {
-      logger.warn("[SP Webhook] Invalid HMAC signature — request rejected")
-      return res.status(401).json({ error: "Invalid signature" })
-    }
+  if (expressReq.rawBody && Buffer.isBuffer(expressReq.rawBody)) {
+    rawBody = expressReq.rawBody
+  } else if (typeof expressReq.rawBody === "string") {
+    rawBody = Buffer.from(expressReq.rawBody, "utf8")
+  } else if (Buffer.isBuffer(expressReq.body)) {
+    rawBody = expressReq.body
+  } else if (typeof expressReq.body === "string") {
+    rawBody = Buffer.from(expressReq.body, "utf8")
   } else {
-    logger.warn("[SP Webhook] SHIRTPLATFORM_WEBHOOK_SECRET not set — skipping signature check")
+    rawBody = Buffer.from(JSON.stringify(expressReq.body ?? ""), "utf8")
+  }
+
+  const expectedSig = createHmac("sha256", secret).update(rawBody).digest("hex")
+
+  let signaturesMatch = false
+  try {
+    signaturesMatch = timingSafeEqual(
+      Buffer.from(signature, "utf8"),
+      Buffer.from(expectedSig, "utf8")
+    )
+  } catch {
+    signaturesMatch = false
+  }
+
+  if (!signaturesMatch) {
+    logger.warn("[SP Webhook] Invalid HMAC signature — request rejected")
+    return res.status(401).json({ error: "Invalid signature" })
   }
 
   // -------------------------------------------------------------------------
@@ -73,11 +83,25 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   logger.info(`[SP Webhook] Received topic: ${topic}`)
 
+  // Idempotency — dedupe redeliveries of the same fulfillment event. Keyed on
+  // topic + SP order id + first tracking number (a genuinely new fulfillment
+  // carries a different tracking number and is processed).
+  const firstTracking =
+    (body?.fulfillments ?? body?.orderFulfillments ?? [])[0]?.trackingNumber ?? ""
+  const eventKey = `${topic}:${body?.id ?? body?.uniqueId ?? "unknown"}:${firstTracking}`
+
+  if (await WebhookEventTracker.isProcessed(eventKey, SP_EVENT_PREFIX)) {
+    logger.info(`[SP Webhook] Duplicate event ${eventKey} — skipping`)
+    return res.status(200).json({ received: true, status: "duplicate" })
+  }
+
   if (topic === "orders/fulfilled") {
     await handleOrderFulfilled(body, req.scope as any, logger)
   } else {
     logger.info(`[SP Webhook] Unhandled topic: ${topic}`)
   }
+
+  await WebhookEventTracker.markAsProcessed(eventKey, SP_EVENT_PREFIX)
 
   // Always return 200 so Shirtplatform stops retrying
   return res.status(200).json({ received: true })
@@ -113,15 +137,25 @@ async function handleOrderFulfilled(body: any, container: any, logger: any) {
       medusaOrder = results?.[0]
     }
 
-    // Fallback: search by stored shirtplatform_order_id in metadata
+    // Fallback: search by stored shirtplatform_order_id in metadata. Bounded to
+    // the most recent orders so a spoofed/unknown payload can't force a full scan.
     if (!medusaOrder && spOrderId) {
-      const allOrders = await orderModule.listOrders(
+      const recentOrders = await orderModule.listOrders(
         {},
-        { select: ["id", "metadata"] }
+        {
+          select: ["id", "metadata"],
+          take: FALLBACK_SCAN_LIMIT,
+          order: { created_at: "DESC" },
+        }
       )
-      medusaOrder = allOrders?.find(
+      medusaOrder = recentOrders?.find(
         (o: any) => o.metadata?.shirtplatform_order_id === spOrderId
       )
+      if (!medusaOrder) {
+        logger.warn(
+          `[SP Webhook] SP order ${spOrderId} not found in the ${FALLBACK_SCAN_LIMIT} most recent orders (no uniqueId match either)`
+        )
+      }
     }
 
     if (!medusaOrder) {

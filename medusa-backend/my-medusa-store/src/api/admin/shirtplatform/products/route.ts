@@ -3,6 +3,7 @@ import { Modules, ProductStatus } from "@medusajs/framework/utils"
 import { createProductsWorkflow } from "@medusajs/medusa/core-flows"
 import { SHIRTPLATFORM_MODULE } from "../../../../modules/shirtplatform"
 import ShirtplatformModuleService from "../../../../modules/shirtplatform/service"
+import { assertAllowedMotiveUrl } from "../../../../lib/ssrf-guard"
 
 /**
  * POST /admin/shirtplatform/products
@@ -119,6 +120,14 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   // can still get a neck label). Placed on the product's NECKTAG print area.
   const neckTag = body.neck_tag
   const hasNeckTag = Boolean(neckTag?.url)
+
+  // SSRF guard — motive/neck-tag URLs must point at the configured object store
+  try {
+    if (hasMotive) assertAllowedMotiveUrl(motive!.url!)
+    if (hasNeckTag) assertAllowedMotiveUrl(neckTag!.url!)
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message })
+  }
 
   // ---- fetch SP base detail (cached) --------------------------------------
   const shirtplatform = req.scope.resolve<ShirtplatformModuleService>(

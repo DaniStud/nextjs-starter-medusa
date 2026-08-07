@@ -32,11 +32,16 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   let event: Stripe.Event
-  
-  const IS_LOCAL_DEV = process.env.NODE_ENV === 'development'
-  
-  if (IS_LOCAL_DEV) {
-    console.warn("[Stripe Webhook] ⚠️ Local dev mode - skipping signature verification")
+
+  // Signature verification may only be skipped when EXPLICITLY opted in via
+  // STRIPE_WEBHOOK_SKIP_VERIFY (local dev with the Stripe CLI). Tying this to
+  // NODE_ENV alone risked any non-production deploy accepting forged events.
+  const SKIP_VERIFY = /^(1|true|yes)$/i.test(
+    process.env.STRIPE_WEBHOOK_SKIP_VERIFY ?? ""
+  )
+
+  if (SKIP_VERIFY) {
+    console.warn("[Stripe Webhook] ⚠️ STRIPE_WEBHOOK_SKIP_VERIFY enabled — skipping signature verification")
     event = req.body as Stripe.Event
   } else {
     try {

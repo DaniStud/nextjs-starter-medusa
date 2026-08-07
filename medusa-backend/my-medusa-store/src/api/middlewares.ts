@@ -31,6 +31,12 @@ export default defineMiddlewares({
       middlewares: [captureRawBody],
     },
     {
+      // Preserve raw body for Stripe signature verification (constructEvent
+      // requires the exact bytes Stripe signed — a re-serialized JSON body fails).
+      matcher: "/stripe/webhook",
+      middlewares: [captureRawBody],
+    },
+    {
       // Increase body size limit for base64 motive uploads (~18 MB binary → ~25 MB base64)
       matcher: "/admin/shirtplatform/motives",
       bodyParser: { sizeLimit: "30mb" },

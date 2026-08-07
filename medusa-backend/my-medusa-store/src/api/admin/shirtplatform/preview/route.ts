@@ -1,6 +1,7 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { SHIRTPLATFORM_MODULE } from "../../../../modules/shirtplatform"
 import ShirtplatformModuleService from "../../../../modules/shirtplatform/service"
+import { assertAllowedMotiveUrl } from "../../../../lib/ssrf-guard"
 
 /**
  * GET /admin/shirtplatform/preview?product_id=46881&color_id=302485&view=FRONT
@@ -23,6 +24,15 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
   if (!Number.isFinite(productId) || productId <= 0) {
     return res.status(400).json({ error: "product_id is required" })
+  }
+
+  // SSRF guard — a provided motive URL must point at the configured object store
+  if (motiveUrl) {
+    try {
+      assertAllowedMotiveUrl(motiveUrl)
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message })
+    }
   }
 
   const shirtplatform = req.scope.resolve<ShirtplatformModuleService>(

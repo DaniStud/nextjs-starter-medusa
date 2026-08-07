@@ -1,6 +1,7 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { SHIRTPLATFORM_MODULE } from "../../../../modules/shirtplatform"
 import ShirtplatformModuleService from "../../../../modules/shirtplatform/service"
+import { assertAllowedMotiveUrl } from "../../../../lib/ssrf-guard"
 
 /**
  * POST /admin/shirtplatform/composed-preview
@@ -51,6 +52,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const motiveUrl = body.motive_url
   if (!motiveUrl) {
     return res.status(400).json({ error: "motive_url is required" })
+  }
+
+  // SSRF guard — only allow fetching from the configured object-storage host(s)
+  try {
+    assertAllowedMotiveUrl(motiveUrl)
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message })
   }
 
   const viewPosition = (body.view_position ?? "FRONT").toUpperCase()

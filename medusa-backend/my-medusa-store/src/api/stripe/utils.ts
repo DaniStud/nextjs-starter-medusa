@@ -152,30 +152,38 @@ const fallbackSet = new Set<string>()
 const FALLBACK_MAX = 1000
 
 export class WebhookEventTracker {
-  static async isProcessed(eventId: string): Promise<boolean> {
+  static async isProcessed(
+    eventId: string,
+    prefix: string = REDIS_KEY_PREFIX
+  ): Promise<boolean> {
+    const key = `${prefix}${eventId}`
     const client = getRedis()
     if (client) {
       try {
-        const exists = await client.exists(`${REDIS_KEY_PREFIX}${eventId}`)
+        const exists = await client.exists(key)
         return exists === 1
       } catch {
-        return fallbackSet.has(eventId)
+        return fallbackSet.has(key)
       }
     }
-    return fallbackSet.has(eventId)
+    return fallbackSet.has(key)
   }
 
-  static async markAsProcessed(eventId: string): Promise<void> {
+  static async markAsProcessed(
+    eventId: string,
+    prefix: string = REDIS_KEY_PREFIX
+  ): Promise<void> {
+    const key = `${prefix}${eventId}`
     const client = getRedis()
     if (client) {
       try {
-        await client.set(`${REDIS_KEY_PREFIX}${eventId}`, "1", "EX", EVENT_TTL_SECONDS)
+        await client.set(key, "1", "EX", EVENT_TTL_SECONDS)
         return
       } catch {
         // fall through to in-memory
       }
     }
-    fallbackSet.add(eventId)
+    fallbackSet.add(key)
     if (fallbackSet.size > FALLBACK_MAX) {
       const arr = Array.from(fallbackSet)
       arr.slice(0, arr.length - FALLBACK_MAX).forEach(id => fallbackSet.delete(id))
