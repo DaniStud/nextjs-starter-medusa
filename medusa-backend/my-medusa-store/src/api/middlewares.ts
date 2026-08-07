@@ -1,40 +1,21 @@
 import { defineMiddlewares } from "@medusajs/framework/http"
-import type {
-  MedusaRequest,
-  MedusaResponse,
-  MedusaNextFunction,
-} from "@medusajs/framework/http"
-
-/**
- * Capture the raw request body as a Buffer before JSON parsing.
- * Required for HMAC signature verification on the Shirtplatform webhook route.
- */
-function captureRawBody(
-  req: MedusaRequest,
-  res: MedusaResponse,
-  next: MedusaNextFunction
-) {
-  const chunks: Buffer[] = []
-  req.on("data", (chunk: Buffer) => chunks.push(chunk))
-  req.on("end", () => {
-    ;(req as any).rawBody = Buffer.concat(chunks)
-    next()
-  })
-  req.on("error", next)
-}
 
 export default defineMiddlewares({
   routes: [
     {
-      // Preserve raw body for Shirtplatform HMAC verification
+      // Preserve the exact raw request bytes for Shirtplatform HMAC verification.
+      // Uses Medusa's native body parser (req.rawBody) — a custom stream reader
+      // hangs when the body has already been consumed.
       matcher: "/store/shirtplatform-webhook",
-      middlewares: [captureRawBody],
+      method: ["POST"],
+      bodyParser: { preserveRawBody: true },
     },
     {
       // Preserve raw body for Stripe signature verification (constructEvent
       // requires the exact bytes Stripe signed — a re-serialized JSON body fails).
       matcher: "/stripe/webhook",
-      middlewares: [captureRawBody],
+      method: ["POST"],
+      bodyParser: { preserveRawBody: true },
     },
     {
       // Increase body size limit for base64 motive uploads (~18 MB binary → ~25 MB base64)
